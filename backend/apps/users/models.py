@@ -28,3 +28,27 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.get_full_name() or self.username} ({self.role})"
+
+
+class OTPPurpose(models.TextChoices):
+    SIGNUP = "signup", "Signup Verification"
+    LOGIN = "login", "Login Verification"
+    EMERGENCY_BOOKING = "emergency_booking", "Emergency Booking"
+
+
+class OneTimePassword(models.Model):
+    """
+    Short-lived OTP codes for phone verification.
+    A phone_number can have multiple OTP rows over time (old ones expire/get marked used);
+    we never reuse or update a code in place, so there's always an audit trail.
+    """
+    phone_number = models.CharField(max_length=15, db_index=True)
+    code = models.CharField(max_length=6)
+    purpose = models.CharField(max_length=30, choices=OTPPurpose.choices, default=OTPPurpose.SIGNUP)
+    is_used = models.BooleanField(default=False)
+    attempts = models.PositiveSmallIntegerField(default=0)  # brute-force guard, max 5 tries per code
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"OTP for {self.phone_number} ({self.purpose})"
