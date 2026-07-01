@@ -47,6 +47,15 @@ export const authAPI = {
   verifyOTP: (phone_number, code, purpose = "signup") =>
     client.post("/auth/otp/verify/", { phone_number, code, purpose }),
   login: (username, password) => client.post("/auth/login/", { username, password }),
+  me: () => client.get("/auth/me/"),
+};
+
+export const hospitalsAPI = {
+  list: () => client.get("/hospitals/"),
+  detail: (id) => client.get(`/hospitals/${id}/`),
+  mine: () => client.get("/hospitals/mine/"),
+  updateBed: (bedId, payload) => client.patch(`/hospitals/beds/${bedId}/`, payload),
+  updateEquipment: (equipmentId, payload) => client.patch(`/hospitals/equipment/${equipmentId}/`, payload),
 };
 
 export default client;
