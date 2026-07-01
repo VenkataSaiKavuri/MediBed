@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import OneTimePassword, User
+
+
+@admin.register(OneTimePassword)
+class OneTimePasswordAdmin(admin.ModelAdmin):
+    list_display = ("phone_number", "code", "purpose", "is_used", "attempts", "created_at", "expires_at")
+    list_filter = ("purpose", "is_used")
+    readonly_fields = [f.name for f in OneTimePassword._meta.fields]
 
 
 @admin.register(User)
