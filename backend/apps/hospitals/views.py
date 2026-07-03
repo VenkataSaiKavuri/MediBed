@@ -47,7 +47,16 @@ class HospitalListView(generics.ListAPIView):
         if specialty:
             qs = qs.filter(doctors__specialty__icontains=specialty, doctors__is_on_duty=True)
 
-        return qs.distinct()
+        qs = qs.distinct()
+
+        ordering = self.request.query_params.get("ordering")
+        allowed_ordering = {"name", "-name", "city", "-city", "updated_at", "-updated_at"}
+        if ordering in allowed_ordering:
+            qs = qs.order_by(ordering)
+        else:
+            qs = qs.order_by("name")  # stable default so pagination doesn't shuffle results between pages
+
+        return qs
 
 
 class HospitalDetailView(generics.RetrieveAPIView):
