@@ -10,6 +10,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     RequestOTPSerializer,
     SignupSerializer,
+    UserProfileSerializer,
     VerifyOTPSerializer,
 )
 
@@ -64,3 +65,12 @@ class VerifyOTPView(APIView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Login endpoint — returns access/refresh JWT tokens with role embedded."""
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class MeView(APIView):
+    """Returns the logged-in user's profile — used by the frontend on every page load
+    to know role/hospital without re-decoding the JWT everywhere."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserProfileSerializer(request.user).data)

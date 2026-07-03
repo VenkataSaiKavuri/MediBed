@@ -47,6 +47,37 @@ export const authAPI = {
   verifyOTP: (phone_number, code, purpose = "signup") =>
     client.post("/auth/otp/verify/", { phone_number, code, purpose }),
   login: (username, password) => client.post("/auth/login/", { username, password }),
+  me: () => client.get("/auth/me/"),
+};
+
+export const hospitalsAPI = {
+  list: (params = {}) => client.get("/hospitals/", { params }),
+  detail: (id) => client.get(`/hospitals/${id}/`),
+  mine: () => client.get("/hospitals/mine/"),
+
+  beds: {
+    create: (payload) => client.post("/hospitals/mine/beds/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/beds/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/beds/${id}/`),
+  },
+  doctors: {
+    create: (payload) => client.post("/hospitals/mine/doctors/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/doctors/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/doctors/${id}/`),
+  },
+  equipment: {
+    create: (payload) => client.post("/hospitals/mine/equipment/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/equipment/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/equipment/${id}/`),
+  },
+};
+
+export const bookingsAPI = {
+  create: (payload) => client.post("/bookings/", payload),
+  mine: () => client.get("/bookings/mine/"),
+  detail: (id) => client.get(`/bookings/${id}/`),
+  hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
+  transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
 };
 
 export default client;

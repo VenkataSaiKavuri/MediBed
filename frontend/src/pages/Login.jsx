@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../api/client";
+import { useAuth } from "../context/AuthContext.jsx";
 
 // Decode JWT payload without extra dependencies
 function decodeJwt(token) {
@@ -13,6 +14,7 @@ function decodeJwt(token) {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refetch } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,8 +30,7 @@ export default function Login() {
       localStorage.setItem("refresh_token", data.refresh);
 
       const payload = decodeJwt(data.access);
-      // Day 3 will build the actual dashboard routes — for now just log the role we got back
-      console.log("Logged in as role:", payload?.role);
+      await refetch(); // updates AuthContext so ProtectedRoute sees the logged-in user immediately
 
       if (payload?.role === "hospital_admin") {
         navigate("/dashboard/hospital-admin");

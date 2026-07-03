@@ -45,6 +45,19 @@ class VerifyOTPSerializer(serializers.Serializer):
     purpose = serializers.ChoiceField(choices=OTPPurpose.choices, default=OTPPurpose.SIGNUP)
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    hospital_name = serializers.CharField(source="hospital.name", read_only=True, default=None)
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "username", "email", "phone_number", "phone_verified",
+            "role", "first_name", "last_name", "hospital", "hospital_name",
+            "reputation_score", "is_flagged",
+        ]
+        read_only_fields = fields
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Adds role + phone_verified to the JWT payload so the frontend can route by role immediately."""
 
