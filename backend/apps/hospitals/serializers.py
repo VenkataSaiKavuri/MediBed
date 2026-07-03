@@ -18,10 +18,26 @@ class EquipmentSerializer(serializers.ModelSerializer):
 
 class DoctorSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="user.get_full_name", read_only=True)
+    user_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Doctor
-        fields = ["id", "name", "specialty", "is_on_duty", "license_number"]
+        fields = ["id", "name", "user_id", "specialty", "is_on_duty", "license_number"]
+
+    def validate_user_id(self, value):
+        from apps.users.models import User
+        try:
+            user = User.objects.get(id=value, role="doctor")
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                "No doctor account found with this user ID. The account must already exist "
+                "with role='doctor' (create it in Django admin first, then link it here)."
+            )
+        return value
+
+    def create(self, validated_data):
+        user_id = validated_data.pop("user_id")
+        return Doctor.objects.create(user_id=user_id, **validated_data)
 
 
 class HospitalListSerializer(serializers.ModelSerializer):
