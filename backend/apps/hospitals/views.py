@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import permissions, viewsets, generics
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -16,10 +17,37 @@ from .serializers import (
 
 
 class HospitalListView(generics.ListAPIView):
-    """Public-ish (any authenticated user) list of hospitals for patient search — Day 5 will add filters."""
-    queryset = Hospital.objects.filter(is_verified=True)
+    """
+    Patient-facing hospital search.
+    Supports query params (all optional, combinable):
+      ?city=Guntur
+      ?bed_type=icu          -> only hospitals with at least 1 available bed of this type
+      ?specialty=cardiology  -> only hospitals with an on-duty doctor of this specialty (case-insensitive contains)
+      ?search=apollo         -> name/city contains
+    """
     serializer_class = HospitalListSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Hospital.objects.filter(is_verified=True).prefetch_related("bed_inventory", "doctors")
+
+        city = self.request.query_params.get("city")
+        if city:
+            qs = qs.filter(city__icontains=city)
+
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(city__icontains=search))
+
+        bed_type = self.request.query_params.get("bed_type")
+        if bed_type:
+            qs = qs.filter(bed_inventory__bed_type=bed_type, bed_inventory__available_count__gt=0)
+
+        specialty = self.request.query_params.get("specialty")
+        if specialty:
+            qs = qs.filter(doctors__specialty__icontains=specialty, doctors__is_on_duty=True)
+
+        return qs.distinct()
 
 
 class HospitalDetailView(generics.RetrieveAPIView):

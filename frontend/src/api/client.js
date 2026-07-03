@@ -51,7 +51,7 @@ export const authAPI = {
 };
 
 export const hospitalsAPI = {
-  list: () => client.get("/hospitals/"),
+  list: (params = {}) => client.get("/hospitals/", { params }),
   detail: (id) => client.get(`/hospitals/${id}/`),
   mine: () => client.get("/hospitals/mine/"),
 
