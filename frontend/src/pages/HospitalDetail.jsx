@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { hospitalsAPI } from "../api/client";
 
 export default function HospitalDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [hospital, setHospital] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -68,7 +69,7 @@ export default function HospitalDetail() {
 
       <button
         style={{ width: "100%", padding: 14, background: "#2563eb", color: "white", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}
-        onClick={() => alert("Booking form arrives on Day 9.")}
+        onClick={() => navigate(`/hospitals/${id}/book`)}
       >
         Book a Bed Here
       </button>

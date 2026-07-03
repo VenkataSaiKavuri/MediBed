@@ -1,8 +1,15 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.hospitals.models import BedType
 
 from .models import Booking, BookingStatus, BookingStatusLog
+
+# Matches the original plan's Day 10 spec: 2 hours for hospitals to respond to a
+# non-emergency booking request. Emergency bookings (Day 23) get a much shorter SLA.
+SCHEDULED_BOOKING_SLA_HOURS = 2
 
 
 class BookingStatusLogSerializer(serializers.ModelSerializer):
@@ -40,7 +47,8 @@ class CreateBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Booking
-        fields = ["hospital", "doctor", "bed_type", "scheduled_time", "condition_category"]
+        fields = ["id", "hospital", "doctor", "bed_type", "scheduled_time", "condition_category", "sla_deadline"]
+        read_only_fields = ["id", "sla_deadline"]
 
     def validate_bed_type(self, value):
         if value not in BedType.values:
@@ -63,6 +71,7 @@ class CreateBookingSerializer(serializers.ModelSerializer):
             is_emergency=False,
             device_id=request.headers.get("X-Device-Id", ""),
             ip_address=request.META.get("REMOTE_ADDR"),
+            sla_deadline=timezone.now() + timedelta(hours=SCHEDULED_BOOKING_SLA_HOURS),
             **validated_data,
         )
 
