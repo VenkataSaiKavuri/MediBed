@@ -54,8 +54,22 @@ export const hospitalsAPI = {
   list: () => client.get("/hospitals/"),
   detail: (id) => client.get(`/hospitals/${id}/`),
   mine: () => client.get("/hospitals/mine/"),
-  updateBed: (bedId, payload) => client.patch(`/hospitals/beds/${bedId}/`, payload),
-  updateEquipment: (equipmentId, payload) => client.patch(`/hospitals/equipment/${equipmentId}/`, payload),
+
+  beds: {
+    create: (payload) => client.post("/hospitals/mine/beds/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/beds/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/beds/${id}/`),
+  },
+  doctors: {
+    create: (payload) => client.post("/hospitals/mine/doctors/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/doctors/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/doctors/${id}/`),
+  },
+  equipment: {
+    create: (payload) => client.post("/hospitals/mine/equipment/", payload),
+    update: (id, payload) => client.patch(`/hospitals/mine/equipment/${id}/`, payload),
+    delete: (id) => client.delete(`/hospitals/mine/equipment/${id}/`),
+  },
 };
 
 export default client;

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { hospitalsAPI } from "../../api/client";
 import { useAuth } from "../../context/AuthContext.jsx";
+import BedInventorySection from "./components/BedInventorySection.jsx";
+import DoctorSection from "./components/DoctorSection.jsx";
+import EquipmentSection from "./components/EquipmentSection.jsx";
 
 export default function HospitalAdminDashboard() {
   const { user, logout } = useAuth();
@@ -8,7 +11,7 @@ export default function HospitalAdminDashboard() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadHospital = () => {
     hospitalsAPI
       .mine()
       .then(({ data }) => setHospital(data))
@@ -16,6 +19,10 @@ export default function HospitalAdminDashboard() {
         setError(err.response?.data?.detail || "Your account isn't linked to a hospital yet.")
       )
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadHospital();
   }, []);
 
   if (loading) return <p style={{ textAlign: "center", marginTop: 80 }}>Loading...</p>;
@@ -43,53 +50,9 @@ export default function HospitalAdminDashboard() {
 
       {hospital && (
         <>
-          <section style={{ marginBottom: 28 }}>
-            <h2 style={{ fontSize: 18 }}>Bed Inventory</h2>
-            {hospital.bed_inventory.length === 0 && <p style={{ color: "#666" }}>No bed types added yet — add via Django admin.</p>}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-              {hospital.bed_inventory.map((bed) => (
-                <div key={bed.id} style={{ padding: 14, background: "white", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <strong style={{ textTransform: "capitalize" }}>{bed.bed_type}</strong>
-                  <p style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 700 }}>
-                    {bed.available_count}/{bed.total_count}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 12, color: "#999" }}>available / total</p>
-                  {/* Edit form to update total_count comes in Day 4 */}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section style={{ marginBottom: 28 }}>
-            <h2 style={{ fontSize: 18 }}>Doctors</h2>
-            {hospital.doctors.length === 0 && <p style={{ color: "#666" }}>No doctors added yet.</p>}
-            <div style={{ display: "grid", gap: 8 }}>
-              {hospital.doctors.map((doc) => (
-                <div key={doc.id} style={{ padding: 12, background: "white", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
-                  <span>{doc.name} — {doc.specialty}</span>
-                  <span style={{ color: doc.is_on_duty ? "#16a34a" : "#999" }}>
-                    {doc.is_on_duty ? "On duty" : "Off duty"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 style={{ fontSize: 18 }}>Equipment</h2>
-            {hospital.equipment.length === 0 && <p style={{ color: "#666" }}>No equipment added yet.</p>}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-              {hospital.equipment.map((eq) => (
-                <div key={eq.id} style={{ padding: 14, background: "white", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                  <strong>{eq.name}</strong>
-                  <p style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 700 }}>
-                    {eq.available_count}/{eq.total_count}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 12, color: "#999", textTransform: "capitalize" }}>{eq.status}</p>
-                </div>
-              ))}
-            </div>
-          </section>
+          <BedInventorySection beds={hospital.bed_inventory} onChange={loadHospital} />
+          <DoctorSection doctors={hospital.doctors} onChange={loadHospital} />
+          <EquipmentSection equipment={hospital.equipment} onChange={loadHospital} />
         </>
       )}
     </div>
