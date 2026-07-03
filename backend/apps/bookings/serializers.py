@@ -40,7 +40,8 @@ class CreateBookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Booking
-        fields = ["hospital", "doctor", "bed_type", "scheduled_time", "condition_category"]
+        fields = ["id", "hospital", "doctor", "bed_type", "scheduled_time", "condition_category"]
+        read_only_fields = ["id"]
 
     def validate_bed_type(self, value):
         if value not in BedType.values:

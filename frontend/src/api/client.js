@@ -72,4 +72,12 @@ export const hospitalsAPI = {
   },
 };
 
+export const bookingsAPI = {
+  create: (payload) => client.post("/bookings/", payload),
+  mine: () => client.get("/bookings/mine/"),
+  detail: (id) => client.get(`/bookings/${id}/`),
+  hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
+  transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
+};
+
 export default client;
