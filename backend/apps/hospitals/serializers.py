@@ -41,10 +41,26 @@ class DoctorSerializer(serializers.ModelSerializer):
 
 
 class HospitalListSerializer(serializers.ModelSerializer):
-    """Lightweight — used for the patient-facing search list."""
+    """Lightweight — used for the patient-facing search list. Includes just enough
+    bed/specialty info to let a patient judge relevance without an extra API call per hospital."""
+    available_beds = serializers.SerializerMethodField()
+    specialties = serializers.SerializerMethodField()
+
     class Meta:
         model = Hospital
-        fields = ["id", "name", "city", "address", "latitude", "longitude", "phone_number", "is_verified"]
+        fields = [
+            "id", "name", "city", "address", "latitude", "longitude", "phone_number",
+            "is_verified", "available_beds", "specialties",
+        ]
+
+    def get_available_beds(self, obj):
+        return {
+            bed.bed_type: bed.available_count
+            for bed in obj.bed_inventory.all()
+        }
+
+    def get_specialties(self, obj):
+        return sorted({doc.specialty for doc in obj.doctors.all() if doc.is_on_duty})
 
 
 class HospitalDetailSerializer(serializers.ModelSerializer):
