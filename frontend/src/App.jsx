@@ -9,6 +9,7 @@ import HospitalDetail from "./pages/HospitalDetail.jsx";
 import BookingForm from "./pages/bookings/BookingForm.jsx";
 import BookingConfirmation from "./pages/bookings/BookingConfirmation.jsx";
 import HospitalAdminDashboard from "./pages/dashboard/HospitalAdminDashboard.jsx";
+import BookingsDashboard from "./pages/dashboard/BookingsDashboard.jsx";
 import PatientDashboard from "./pages/dashboard/PatientDashboard.jsx";
 
 export default function App() {
@@ -59,6 +60,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["hospital_admin"]}>
                 <HospitalAdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/hospital-admin/bookings"
+            element={
+              <ProtectedRoute allowedRoles={["hospital_admin"]}>
+                <BookingsDashboard />
               </ProtectedRoute>
             }
           />
