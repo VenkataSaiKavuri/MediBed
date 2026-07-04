@@ -5,6 +5,7 @@ Day 11's auto-decrement/increment and Day 15's no-show detection reliable: every
 change is logged and only happens via an allowed transition.
 """
 from django.db import transaction
+from django.utils import timezone
 
 from apps.core.notifications import notify_booking_status_change
 from apps.hospitals.models import BedInventory
@@ -111,11 +112,12 @@ def transition_booking(booking: Booking, new_status: str, changed_by=None, note:
                 "Cannot confirm this booking — the patient hasn't paid the refundable deposit yet."
             )
         _decrement_bed(locked_booking.hospital_id, locked_booking.bed_type)
+        locked_booking.confirmed_at = timezone.now()
     elif current_status == BookingStatus.CONFIRMED and new_status in STATUSES_THAT_RELEASE_A_HELD_BED:
         _increment_bed(locked_booking.hospital_id, locked_booking.bed_type)
 
     locked_booking.status = new_status
-    locked_booking.save(update_fields=["status", "updated_at"])
+    locked_booking.save(update_fields=["status", "updated_at", "confirmed_at"])
 
     BookingStatusLog.objects.create(
         booking=locked_booking,

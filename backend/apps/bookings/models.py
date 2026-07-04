@@ -26,6 +26,9 @@ class Booking(models.Model):
 
     scheduled_time = models.DateTimeField(null=True, blank=True)  # non-emergency bookings only
     sla_deadline = models.DateTimeField(null=True, blank=True)     # hospital must respond by this time
+    confirmed_at = models.DateTimeField(null=True, blank=True)     # set when status -> confirmed; anchors
+                                                                     # the no-show grace period (Day 15) when
+                                                                     # scheduled_time wasn't provided
 
     # --- Anti-fraud / deposit fields ---
     deposit_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
