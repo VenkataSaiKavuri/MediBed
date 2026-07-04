@@ -1,7 +1,14 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .views import CustomTokenObtainPairView, MeView, RequestOTPView, SignupView, VerifyOTPView
+from .views import (
+    CustomTokenObtainPairView,
+    MeView,
+    RegisterFCMTokenView,
+    RequestOTPView,
+    SignupView,
+    VerifyOTPView,
+)
 
 app_name = "users"
 
@@ -12,4 +19,5 @@ urlpatterns = [
     path("login/", CustomTokenObtainPairView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("me/", MeView.as_view(), name="me"),
+    path("fcm-token/", RegisterFCMTokenView.as_view(), name="fcm-token"),
 ]
