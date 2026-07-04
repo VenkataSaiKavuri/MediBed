@@ -63,7 +63,8 @@ export default function BookingsDashboard() {
       await bookingsAPI.transition(bookingId, status);
       load();
     } catch (err) {
-      alert(err.response?.data?.detail || "Action failed.");
+      const message = err.response?.data?.detail || "Action failed.";
+      alert(message); // e.g. "No 'icu' beds currently available at this hospital." (409 Conflict)
     } finally {
       setActingOn(null);
     }

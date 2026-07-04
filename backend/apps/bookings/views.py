@@ -8,7 +8,7 @@ from apps.core.permissions import IsHospitalStaff, IsPatient
 
 from .models import Booking, BookingStatus
 from .serializers import BookingSerializer, CreateBookingSerializer, TransitionBookingSerializer
-from .services import InvalidTransitionError, transition_booking
+from .services import InvalidTransitionError, NoBedAvailableError, transition_booking
 
 # Which target statuses each role is allowed to request — enforced here, ON TOP of the
 # state-machine's own transition rules in services.py. A role check alone isn't enough
@@ -102,5 +102,7 @@ class TransitionBookingView(APIView):
             updated = transition_booking(booking, new_status, changed_by=user, note=note)
         except InvalidTransitionError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except NoBedAvailableError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_409_CONFLICT)
 
         return Response(BookingSerializer(updated).data)
