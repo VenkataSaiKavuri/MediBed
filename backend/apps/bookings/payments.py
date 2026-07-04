@@ -65,6 +65,32 @@ def verify_payment_signature(order_id: str, payment_id: str, signature: str) -> 
         return False
 
 
+def verify_payment_amount(order_id: str, payment_id: str, expected_amount_rupees) -> bool:
+    """
+    Signature verification alone only proves the payment response wasn't tampered with
+    client-side — it does NOT confirm the amount actually captured matches what we expected.
+    Without this check, a technically-valid-signature payment for ₹1 could be used to
+    satisfy a ₹500 deposit requirement if an attacker found any way to initiate a smaller
+    real payment against a manipulated order. This fetches the actual captured payment from
+    Razorpay's servers and compares it against our own records — never trusting a client-
+    supplied amount.
+    Dev-mode always passes since there's no real payment to check.
+    """
+    if _is_dev_mode() or order_id.startswith("order_dev_") or payment_id.startswith("pay_dev_"):
+        return True
+
+    import razorpay
+
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    payment = client.payment.fetch(payment_id)
+    expected_paise = int(float(expected_amount_rupees) * 100)
+    return (
+        payment.get("order_id") == order_id
+        and payment.get("status") == "captured"
+        and int(payment.get("amount", 0)) == expected_paise
+    )
+
+
 def refund_payment(payment_id: str, amount_rupees) -> dict:
     """Issues a refund. Dev-mode payment IDs (pay_dev_...) get a fake refund ID instantly."""
     amount_paise = int(float(amount_rupees) * 100)
