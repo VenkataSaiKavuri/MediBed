@@ -76,6 +76,11 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         hospital = attrs.get("hospital")
         if doctor and hospital and doctor.hospital_id != hospital.id:
             raise serializers.ValidationError("Selected doctor does not belong to the selected hospital.")
+        # A patient shouldn't be able to request a doctor who's currently off-duty — the
+        # frontend already filters these out of the dropdown, but the API must enforce it
+        # too, since anyone could bypass the UI and post a doctor ID directly.
+        if doctor and not doctor.is_on_duty:
+            raise serializers.ValidationError("Selected doctor is not currently on duty.")
         return attrs
 
     def create(self, validated_data):
