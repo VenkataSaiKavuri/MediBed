@@ -6,6 +6,7 @@ change is logged and only happens via an allowed transition.
 """
 from django.db import transaction
 
+from apps.core.notifications import notify_booking_status_change
 from apps.hospitals.models import BedInventory
 
 from .models import Booking, BookingStatus, BookingStatusLog
@@ -102,7 +103,19 @@ def transition_booking(booking: Booking, new_status: str, changed_by=None, note:
         note=note,
     )
 
+    # Notification is best-effort — a failure here should never roll back a real status
+    # change or bed inventory adjustment. transaction.on_commit ensures it only fires
+    # once the whole transition has actually been committed to the DB, not before.
+    transaction.on_commit(lambda: _safe_notify(locked_booking))
+
     return locked_booking
+
+
+def _safe_notify(booking: Booking) -> None:
+    try:
+        notify_booking_status_change(booking)
+    except Exception as e:  # noqa: BLE001 — deliberately broad: notifications must never break a booking action
+        print(f"[notification error] Failed to notify booking {booking.id}: {e}")
 
 
 def can_transition(current_status: str, new_status: str) -> bool:
