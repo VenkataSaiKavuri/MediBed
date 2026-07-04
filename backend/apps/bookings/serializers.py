@@ -34,13 +34,13 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "patient", "patient_name", "patient_phone", "hospital", "hospital_name",
             "doctor", "doctor_name", "bed_type", "status", "is_emergency", "condition_category",
-            "scheduled_time", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
-            "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
+            "scheduled_time", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
         read_only_fields = [
-            "id", "status", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
-            "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
+            "id", "status", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
 
