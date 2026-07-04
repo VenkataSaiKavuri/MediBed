@@ -119,6 +119,11 @@ export default function BookingsDashboard() {
               <div style={{ textAlign: "right" }}>
                 <span style={statusBadgeStyle(b.status)}>{b.status.replace("_", " ")}</span>
                 {b.status === "requested" && <div style={{ marginTop: 6 }}><SlaCountdown deadline={b.sla_deadline} /></div>}
+                {b.status === "requested" && Number(b.deposit_amount) > 0 && (
+                  <div style={{ marginTop: 4, fontSize: 11, fontWeight: 700, color: b.deposit_paid ? "#16a34a" : "#dc2626" }}>
+                    {b.deposit_paid ? "✓ Deposit paid" : "⚠ Deposit not paid"}
+                  </div>
+                )}
               </div>
             </div>
 
