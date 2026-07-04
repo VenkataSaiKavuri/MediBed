@@ -64,8 +64,10 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        from apps.core.notifications import notify_booking_status_change
+
         request = self.context["request"]
-        return Booking.objects.create(
+        booking = Booking.objects.create(
             patient=request.user,
             status=BookingStatus.REQUESTED,
             is_emergency=False,
@@ -74,6 +76,11 @@ class CreateBookingSerializer(serializers.ModelSerializer):
             sla_deadline=timezone.now() + timedelta(hours=SCHEDULED_BOOKING_SLA_HOURS),
             **validated_data,
         )
+        try:
+            notify_booking_status_change(booking)
+        except Exception as e:  # noqa: BLE001 — never let a notification failure break booking creation
+            print(f"[notification error] Failed to notify new booking {booking.id}: {e}")
+        return booking
 
 
 class TransitionBookingSerializer(serializers.Serializer):

@@ -74,3 +74,15 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserProfileSerializer(request.user).data)
+
+
+class RegisterFCMTokenView(APIView):
+    """Frontend calls this once it has a Firebase device token, so push notifications
+    (Day 12) have somewhere to be sent."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get("fcm_token", "")
+        request.user.fcm_token = token
+        request.user.save(update_fields=["fcm_token"])
+        return Response({"message": "Token registered."})

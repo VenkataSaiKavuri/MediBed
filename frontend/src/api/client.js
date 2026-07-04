@@ -48,6 +48,7 @@ export const authAPI = {
     client.post("/auth/otp/verify/", { phone_number, code, purpose }),
   login: (username, password) => client.post("/auth/login/", { username, password }),
   me: () => client.get("/auth/me/"),
+  registerFcmToken: (fcm_token) => client.post("/auth/fcm-token/", { fcm_token }),
 };
 
 export const hospitalsAPI = {
