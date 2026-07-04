@@ -48,6 +48,7 @@ export const authAPI = {
     client.post("/auth/otp/verify/", { phone_number, code, purpose }),
   login: (username, password) => client.post("/auth/login/", { username, password }),
   me: () => client.get("/auth/me/"),
+  registerFcmToken: (fcm_token) => client.post("/auth/fcm-token/", { fcm_token }),
 };
 
 export const hospitalsAPI = {
@@ -78,6 +79,7 @@ export const bookingsAPI = {
   detail: (id) => client.get(`/bookings/${id}/`),
   hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
+  verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
 };
 
 export default client;

@@ -6,6 +6,7 @@ from .views import (
     HospitalBookingsView,
     MyBookingsView,
     TransitionBookingView,
+    VerifyPaymentView,
 )
 
 app_name = "bookings"
@@ -16,4 +17,5 @@ urlpatterns = [
     path("hospital/", HospitalBookingsView.as_view(), name="hospital-list"),
     path("<int:pk>/", BookingDetailView.as_view(), name="detail"),
     path("<int:pk>/transition/", TransitionBookingView.as_view(), name="transition"),
+    path("<int:pk>/verify-payment/", VerifyPaymentView.as_view(), name="verify-payment"),
 ]

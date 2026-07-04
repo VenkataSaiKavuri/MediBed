@@ -24,6 +24,11 @@ class User(AbstractUser):
         "hospitals.Hospital", null=True, blank=True, on_delete=models.SET_NULL, related_name="staff"
     )
 
+    # Push notifications (Day 12) — set by the frontend after the browser/app grants notification
+    # permission and Firebase issues a device token. Blank until then; notifications simply skip
+    # push for users who haven't registered one yet (SMS still goes out regardless).
+    fcm_token = models.CharField(max_length=255, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

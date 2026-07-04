@@ -7,8 +7,14 @@ from rest_framework.views import APIView
 from apps.core.permissions import IsHospitalStaff, IsPatient
 
 from .models import Booking, BookingStatus
-from .serializers import BookingSerializer, CreateBookingSerializer, TransitionBookingSerializer
-from .services import InvalidTransitionError, transition_booking
+from .serializers import (
+    BookingSerializer,
+    CreateBookingSerializer,
+    TransitionBookingSerializer,
+    VerifyPaymentSerializer,
+)
+from .services import InvalidTransitionError, NoBedAvailableError, transition_booking
+from .payments import verify_payment_signature
 
 # Which target statuses each role is allowed to request — enforced here, ON TOP of the
 # state-machine's own transition rules in services.py. A role check alone isn't enough
@@ -102,5 +108,30 @@ class TransitionBookingView(APIView):
             updated = transition_booking(booking, new_status, changed_by=user, note=note)
         except InvalidTransitionError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except NoBedAvailableError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_409_CONFLICT)
 
         return Response(BookingSerializer(updated).data)
+
+
+class VerifyPaymentView(APIView):
+    """Patient calls this right after completing the Razorpay checkout (or immediately,
+    in dev-stub mode) to confirm the deposit was actually paid."""
+    permission_classes = [permissions.IsAuthenticated, IsPatient]
+
+    def post(self, request, pk):
+        booking = generics.get_object_or_404(Booking, pk=pk, patient=request.user)
+        serializer = VerifyPaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payment_id = serializer.validated_data["razorpay_payment_id"]
+        signature = serializer.validated_data.get("razorpay_signature", "")
+
+        if not verify_payment_signature(booking.razorpay_order_id, payment_id, signature):
+            return Response({"detail": "Payment verification failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        booking.razorpay_payment_id = payment_id
+        booking.deposit_paid = True
+        booking.save(update_fields=["razorpay_payment_id", "deposit_paid"])
+
+        return Response(BookingSerializer(booking).data)

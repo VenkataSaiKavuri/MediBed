@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { hospitalsAPI } from "../../api/client";
 import { useAuth } from "../../context/AuthContext.jsx";
 import BedInventorySection from "./components/BedInventorySection.jsx";
@@ -38,6 +39,16 @@ export default function HospitalAdminDashboard() {
           Log out
         </button>
       </div>
+
+      <Link
+        to="/dashboard/hospital-admin/bookings"
+        style={{
+          display: "inline-block", marginBottom: 20, padding: "10px 16px", background: "#2563eb",
+          color: "white", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none",
+        }}
+      >
+        📋 View Booking Requests
+      </Link>
 
       {error && (
         <div style={{ padding: 16, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#b91c1c" }}>
