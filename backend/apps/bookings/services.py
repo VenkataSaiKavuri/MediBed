@@ -44,6 +44,14 @@ class NoBedAvailableError(Exception):
     pass
 
 
+class DepositNotPaidError(Exception):
+    """Raised if a booking tries to move to CONFIRMED without a paid deposit. This is the
+    actual enforcement point for the anti-fraud deposit system — without this check, a
+    hospital admin could confirm (and consume real bed inventory for) a booking that never
+    put any money down, which defeats the entire purpose of collecting a deposit at all."""
+    pass
+
+
 def _decrement_bed(hospital_id: int, bed_type: str) -> None:
     try:
         bed = BedInventory.objects.select_for_update().get(hospital_id=hospital_id, bed_type=bed_type)
@@ -94,6 +102,14 @@ def transition_booking(booking: Booking, new_status: str, changed_by=None, note:
 
     # --- Inventory side effects, before we commit the status change ---
     if new_status == BookingStatus.CONFIRMED:
+        # Enforce payment BEFORE touching inventory — if this check were after
+        # _decrement_bed(), a failed deposit check would still need to reverse an
+        # already-decremented bed, adding needless complexity. Checking first means
+        # nothing happens at all if the deposit isn't in.
+        if locked_booking.deposit_amount > 0 and not locked_booking.deposit_paid:
+            raise DepositNotPaidError(
+                "Cannot confirm this booking — the patient hasn't paid the refundable deposit yet."
+            )
         _decrement_bed(locked_booking.hospital_id, locked_booking.bed_type)
     elif current_status == BookingStatus.CONFIRMED and new_status in STATUSES_THAT_RELEASE_A_HELD_BED:
         _increment_bed(locked_booking.hospital_id, locked_booking.bed_type)
