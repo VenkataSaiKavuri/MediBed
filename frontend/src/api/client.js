@@ -79,6 +79,7 @@ export const bookingsAPI = {
   detail: (id) => client.get(`/bookings/${id}/`),
   hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
+  verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
 };
 
 export default client;
