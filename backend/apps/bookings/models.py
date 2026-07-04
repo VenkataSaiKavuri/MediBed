@@ -31,6 +31,13 @@ class Booking(models.Model):
     deposit_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     deposit_paid = models.BooleanField(default=False)
     deposit_refunded = models.BooleanField(default=False)
+    deposit_forfeited = models.BooleanField(default=False)  # true on no-show — the whole point of the deposit
+
+    # Razorpay tracking — order created at booking time, payment_id captured after checkout,
+    # refund_id captured if/when the deposit is returned
+    razorpay_order_id = models.CharField(max_length=100, blank=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True)
+    razorpay_refund_id = models.CharField(max_length=100, blank=True)
 
     # --- Audit trail (critical for emergency fraud review, Day 25) ---
     device_id = models.CharField(max_length=255, blank=True)
