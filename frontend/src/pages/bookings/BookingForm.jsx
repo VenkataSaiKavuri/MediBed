@@ -61,7 +61,12 @@ export default function BookingForm() {
       setPayingBooking(data); // move to the deposit-payment step instead of navigating away yet
     } catch (err) {
       const errData = err.response?.data;
-      setError(errData ? Object.values(errData).flat().join(" ") : "Couldn't create booking. Try again.");
+      const errorText = errData ? Object.values(errData).flat().join(" ") : "Couldn't create booking. Try again.";
+      if (errorText.toLowerCase().includes("upload an id document")) {
+        navigate("/verify-identity");
+        return;
+      }
+      setError(errorText);
     } finally {
       setSubmitting(false);
     }

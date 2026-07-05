@@ -49,6 +49,11 @@ export const authAPI = {
   login: (username, password) => client.post("/auth/login/", { username, password }),
   me: () => client.get("/auth/me/"),
   registerFcmToken: (fcm_token) => client.post("/auth/fcm-token/", { fcm_token }),
+  uploadIdentityDocument: (formData) =>
+    client.post("/auth/identity-documents/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  myIdentityDocuments: () => client.get("/auth/identity-documents/mine/"),
 };
 
 export const hospitalsAPI = {
@@ -80,6 +85,16 @@ export const bookingsAPI = {
   hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
   verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
+};
+
+export const fraudAPI = {
+  summary: () => client.get("/admin-panel/summary/"),
+  flaggedUsers: () => client.get("/admin-panel/flagged-users/"),
+  unflagUser: (id) => client.post(`/admin-panel/flagged-users/${id}/unflag/`),
+  suspiciousBookings: () => client.get("/admin-panel/suspicious-bookings/"),
+  clearBookingFlag: (id) => client.post(`/admin-panel/suspicious-bookings/${id}/clear/`),
+  pendingDocuments: () => client.get("/admin-panel/pending-documents/"),
+  reviewDocument: (id, action) => client.post(`/admin-panel/pending-documents/${id}/review/`, { action }),
 };
 
 export default client;

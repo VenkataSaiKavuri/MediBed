@@ -3,10 +3,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     CustomTokenObtainPairView,
+    DownloadIdentityDocumentView,
     MeView,
+    MyIdentityDocumentsView,
     RegisterFCMTokenView,
     RequestOTPView,
     SignupView,
+    UploadIdentityDocumentView,
     VerifyOTPView,
 )
 
@@ -20,4 +23,7 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("me/", MeView.as_view(), name="me"),
     path("fcm-token/", RegisterFCMTokenView.as_view(), name="fcm-token"),
+    path("identity-documents/", UploadIdentityDocumentView.as_view(), name="identity-upload"),
+    path("identity-documents/mine/", MyIdentityDocumentsView.as_view(), name="identity-mine"),
+    path("identity-documents/<int:pk>/download/", DownloadIdentityDocumentView.as_view(), name="identity-download"),
 ]

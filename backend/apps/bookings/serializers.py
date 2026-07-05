@@ -83,6 +83,19 @@ class CreateBookingSerializer(serializers.ModelSerializer):
                 "restore instant booking."
             )
 
+        # Day 18: at least one ID document must be on file before a non-emergency booking
+        # can be created. Note this only requires an UPLOAD to exist — it does not require
+        # id_document_verified=True (an exact name match), since that would block genuine
+        # patients over a shaky string-similarity check with no human review yet available.
+        # A mismatch is still recorded and surfaced for platform admin review (Day 19),
+        # matching the same soft-signal philosophy as Day 17.
+        from apps.users.models import IdentityDocument
+        if not IdentityDocument.objects.filter(user=request.user).exists():
+            raise serializers.ValidationError(
+                "Please upload an ID document (Aadhaar or passport) before booking. "
+                "This is a one-time step to help prevent fraudulent bookings."
+            )
+
         # A doctor, if specified, must belong to the chosen hospital — prevents cross-hospital mismatches
         doctor = attrs.get("doctor")
         hospital = attrs.get("hospital")

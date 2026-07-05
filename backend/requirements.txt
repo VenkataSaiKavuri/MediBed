@@ -7,3 +7,5 @@ python-dotenv==1.0.1
 celery==5.4.0
 redis==5.0.4
 gunicorn==22.0.0
+razorpay==2.0.1
+cryptography==42.0.8
