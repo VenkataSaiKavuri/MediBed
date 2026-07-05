@@ -7,6 +7,7 @@ import Signup from "./pages/Signup.jsx";
 import VerifyOtp from "./pages/VerifyOtp.jsx";
 import HospitalDetail from "./pages/HospitalDetail.jsx";
 import BookingForm from "./pages/bookings/BookingForm.jsx";
+import EmergencyBooking from "./pages/bookings/EmergencyBooking.jsx";
 import BookingConfirmation from "./pages/bookings/BookingConfirmation.jsx";
 import UploadIdentityDocument from "./pages/identity/UploadIdentityDocument.jsx";
 import HospitalAdminDashboard from "./pages/dashboard/HospitalAdminDashboard.jsx";
@@ -45,6 +46,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
                 <BookingForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/emergency"
+            element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <EmergencyBooking />
               </ProtectedRoute>
             }
           />
