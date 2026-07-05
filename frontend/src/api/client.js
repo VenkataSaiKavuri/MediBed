@@ -87,4 +87,14 @@ export const bookingsAPI = {
   verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
 };
 
+export const fraudAPI = {
+  summary: () => client.get("/admin-panel/summary/"),
+  flaggedUsers: () => client.get("/admin-panel/flagged-users/"),
+  unflagUser: (id) => client.post(`/admin-panel/flagged-users/${id}/unflag/`),
+  suspiciousBookings: () => client.get("/admin-panel/suspicious-bookings/"),
+  clearBookingFlag: (id) => client.post(`/admin-panel/suspicious-bookings/${id}/clear/`),
+  pendingDocuments: () => client.get("/admin-panel/pending-documents/"),
+  reviewDocument: (id, action) => client.post(`/admin-panel/pending-documents/${id}/review/`, { action }),
+};
+
 export default client;
