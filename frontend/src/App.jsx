@@ -8,6 +8,7 @@ import VerifyOtp from "./pages/VerifyOtp.jsx";
 import HospitalDetail from "./pages/HospitalDetail.jsx";
 import BookingForm from "./pages/bookings/BookingForm.jsx";
 import BookingConfirmation from "./pages/bookings/BookingConfirmation.jsx";
+import UploadIdentityDocument from "./pages/identity/UploadIdentityDocument.jsx";
 import HospitalAdminDashboard from "./pages/dashboard/HospitalAdminDashboard.jsx";
 import BookingsDashboard from "./pages/dashboard/BookingsDashboard.jsx";
 import PatientDashboard from "./pages/dashboard/PatientDashboard.jsx";
@@ -51,6 +52,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
                 <BookingConfirmation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verify-identity"
+            element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <UploadIdentityDocument />
               </ProtectedRoute>
             }
           />
