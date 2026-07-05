@@ -7,10 +7,12 @@ import Signup from "./pages/Signup.jsx";
 import VerifyOtp from "./pages/VerifyOtp.jsx";
 import HospitalDetail from "./pages/HospitalDetail.jsx";
 import BookingForm from "./pages/bookings/BookingForm.jsx";
+import EmergencyBooking from "./pages/bookings/EmergencyBooking.jsx";
 import BookingConfirmation from "./pages/bookings/BookingConfirmation.jsx";
 import UploadIdentityDocument from "./pages/identity/UploadIdentityDocument.jsx";
 import HospitalAdminDashboard from "./pages/dashboard/HospitalAdminDashboard.jsx";
 import BookingsDashboard from "./pages/dashboard/BookingsDashboard.jsx";
+import PlatformAdminDashboard from "./pages/dashboard/PlatformAdminDashboard.jsx";
 import PatientDashboard from "./pages/dashboard/PatientDashboard.jsx";
 
 export default function App() {
@@ -48,6 +50,14 @@ export default function App() {
             }
           />
           <Route
+            path="/emergency"
+            element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <EmergencyBooking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/bookings/:id/confirmation"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
@@ -77,6 +87,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["hospital_admin"]}>
                 <BookingsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/platform-admin"
+            element={
+              <ProtectedRoute allowedRoles={["platform_admin"]}>
+                <PlatformAdminDashboard />
               </ProtectedRoute>
             }
           />

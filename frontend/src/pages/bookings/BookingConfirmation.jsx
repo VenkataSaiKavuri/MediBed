@@ -55,6 +55,11 @@ export default function BookingConfirmation() {
       <div style={{ fontSize: 40, marginBottom: 8 }}>
         {booking.status === "requested" ? "⏳" : booking.status === "confirmed" ? "✅" : booking.status === "rejected" ? "❌" : "📋"}
       </div>
+      {booking.is_emergency && (
+        <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 12, fontSize: 11, fontWeight: 800, background: "#dc2626", color: "white", marginBottom: 8 }}>
+          🚨 EMERGENCY
+        </span>
+      )}
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Booking Request Sent</h1>
       <p className="subtitle">{booking.hospital_name}</p>
 

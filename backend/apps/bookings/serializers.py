@@ -13,6 +13,11 @@ from .fraud_detection import evaluate_soft_fraud_signals, has_duplicate_active_b
 # non-emergency booking request. Emergency bookings (Day 23) get a much shorter SLA.
 SCHEDULED_BOOKING_SLA_HOURS = 2
 
+# Emergency requests need a hospital response fast — Day 23 will build the actual alert
+# system and Day 24 the auto-escalation to the next hospital once this expires. For now,
+# the deadline is just set here so those later days have something to act on.
+EMERGENCY_BOOKING_SLA_MINUTES = 15
+
 
 class BookingStatusLogSerializer(serializers.ModelSerializer):
     changed_by_name = serializers.CharField(source="changed_by.get_full_name", read_only=True, default="System")
@@ -167,3 +172,51 @@ class TransitionBookingSerializer(serializers.Serializer):
     """Used by hospital admin (confirm/reject) and patient (cancel) to move a booking's status."""
     status = serializers.ChoiceField(choices=BookingStatus.choices)
     note = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+
+class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
+    """
+    Emergency booking creation — deliberately minimal and fast. Unlike CreateBookingSerializer,
+    this SKIPS:
+      - ID document requirement (Day 18) — no time for that when it's urgent
+      - Flagged-user block (Day 16) — a fraud flag shouldn't be able to delay emergency care;
+        the platform accepts higher fraud risk here in exchange for speed, by design
+      - Duplicate-active-booking check (Day 17) — someone in crisis might reasonably need to
+        try multiple hospitals at once if the first doesn't respond fast enough
+      - Deposit collection (Day 13) — payment friction has no place in an emergency flow
+
+    Everything is still logged (device_id, IP, geolocation) for post-hoc fraud review, matching
+    the original plan's explicit trade-off: speed now, audit later, never the reverse.
+    """
+    class Meta:
+        model = Booking
+        fields = [
+            "id", "hospital", "bed_type", "condition_category",
+            "patient_latitude", "patient_longitude", "sla_deadline",
+        ]
+        read_only_fields = ["id", "sla_deadline"]
+
+    def validate_bed_type(self, value):
+        if value not in BedType.values:
+            raise serializers.ValidationError("Invalid bed type.")
+        return value
+
+    def create(self, validated_data):
+        from apps.core.notifications import notify_booking_status_change
+
+        request = self.context["request"]
+        booking = Booking.objects.create(
+            patient=request.user,
+            status=BookingStatus.REQUESTED,
+            is_emergency=True,
+            device_id=request.headers.get("X-Device-Id", ""),
+            ip_address=request.META.get("REMOTE_ADDR"),
+            sla_deadline=timezone.now() + timedelta(minutes=EMERGENCY_BOOKING_SLA_MINUTES),
+            deposit_amount=0,  # no deposit for emergency bookings — see class docstring
+            **validated_data,
+        )
+        try:
+            notify_booking_status_change(booking)
+        except Exception as e:  # noqa: BLE001 — never let a notification failure delay an emergency booking
+            print(f"[notification error] Failed to notify emergency booking {booking.id}: {e}")
+        return booking

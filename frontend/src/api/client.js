@@ -80,11 +80,22 @@ export const hospitalsAPI = {
 
 export const bookingsAPI = {
   create: (payload) => client.post("/bookings/", payload),
+  createEmergency: (payload) => client.post("/bookings/emergency/", payload),
   mine: () => client.get("/bookings/mine/"),
   detail: (id) => client.get(`/bookings/${id}/`),
   hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
   verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
+};
+
+export const fraudAPI = {
+  summary: () => client.get("/admin-panel/summary/"),
+  flaggedUsers: () => client.get("/admin-panel/flagged-users/"),
+  unflagUser: (id) => client.post(`/admin-panel/flagged-users/${id}/unflag/`),
+  suspiciousBookings: () => client.get("/admin-panel/suspicious-bookings/"),
+  clearBookingFlag: (id) => client.post(`/admin-panel/suspicious-bookings/${id}/clear/`),
+  pendingDocuments: () => client.get("/admin-panel/pending-documents/"),
+  reviewDocument: (id, action) => client.post(`/admin-panel/pending-documents/${id}/review/`, { action }),
 };
 
 export default client;

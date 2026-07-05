@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { hospitalsAPI } from "../../api/client";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -13,6 +13,7 @@ const SORT_OPTIONS = [
 
 export default function PatientDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [hospitals, setHospitals] = useState([]);
   const [count, setCount] = useState(0);
   const [nextUrl, setNextUrl] = useState(null);
@@ -81,14 +82,14 @@ export default function PatientDashboard() {
         </div>
       )}
 
-      {/* Emergency booking button — wired up on Day 21 */}
+      {/* Emergency booking button */}
       <button
         style={{
           width: "100%", padding: 16, background: "#dc2626", color: "white",
           border: "none", borderRadius: 10, fontSize: 16, fontWeight: 700,
           marginBottom: 28, cursor: "pointer",
         }}
-        onClick={() => alert("Emergency booking flow arrives on Day 21.")}
+        onClick={() => navigate("/emergency")}
       >
         🚨 Emergency Booking
       </button>

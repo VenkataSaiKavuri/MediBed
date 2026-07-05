@@ -10,6 +10,7 @@ from .models import Booking, BookingStatus
 from .serializers import (
     BookingSerializer,
     CreateBookingSerializer,
+    CreateEmergencyBookingSerializer,
     TransitionBookingSerializer,
     VerifyPaymentSerializer,
 )
@@ -32,6 +33,21 @@ class CreateBookingView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsPatient]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "booking_create"  # 10/hour, set in settings.py — anti-spam guard
+
+    def get_serializer_context(self):
+        return {"request": self.request}
+
+
+class CreateEmergencyBookingView(generics.CreateAPIView):
+    """
+    Patient creates an emergency booking request — fast path, skips KYC (see
+    CreateEmergencyBookingSerializer's docstring for the full list of what's intentionally
+    skipped and why). Uses a separate, slightly looser throttle scope from regular bookings.
+    """
+    serializer_class = CreateEmergencyBookingSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPatient]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "emergency_booking"  # 5/hour, set in settings.py since Day 1
 
     def get_serializer_context(self):
         return {"request": self.request}

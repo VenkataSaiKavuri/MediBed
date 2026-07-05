@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     BookingDetailView,
     CreateBookingView,
+    CreateEmergencyBookingView,
     HospitalBookingsView,
     MyBookingsView,
     TransitionBookingView,
@@ -13,6 +14,7 @@ app_name = "bookings"
 
 urlpatterns = [
     path("", CreateBookingView.as_view(), name="create"),
+    path("emergency/", CreateEmergencyBookingView.as_view(), name="create-emergency"),
     path("mine/", MyBookingsView.as_view(), name="mine"),
     path("hospital/", HospitalBookingsView.as_view(), name="hospital-list"),
     path("<int:pk>/", BookingDetailView.as_view(), name="detail"),
