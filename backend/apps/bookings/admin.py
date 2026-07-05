@@ -11,7 +11,8 @@ class BookingStatusLogInline(admin.TabularInline):
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ("id", "patient", "hospital", "bed_type", "status", "is_emergency", "created_at")
-    list_filter = ("status", "is_emergency", "bed_type", "hospital")
+    list_display = ("id", "patient", "hospital", "bed_type", "status", "is_emergency", "is_suspicious", "created_at")
+    list_filter = ("status", "is_emergency", "is_suspicious", "bed_type", "hospital")
     search_fields = ("patient__username", "patient__phone_number")
+    readonly_fields = ("fraud_flags", "device_id", "ip_address")
     inlines = [BookingStatusLogInline]
