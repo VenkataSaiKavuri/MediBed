@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
 from django.db import models
 
 
@@ -57,3 +58,42 @@ class OneTimePassword(models.Model):
 
     def __str__(self):
         return f"OTP for {self.phone_number} ({self.purpose})"
+
+
+class DocumentType(models.TextChoices):
+    AADHAAR = "aadhaar", "Aadhaar Card"
+    PASSPORT = "passport", "Passport"
+
+
+class NameMatchResult(models.TextChoices):
+    EXACT_MATCH = "exact_match", "Exact Match"
+    CLOSE_MATCH = "close_match", "Close Match"
+    MISMATCH = "mismatch", "Mismatch — Needs Review"
+
+
+class IdentityDocument(models.Model):
+    """
+    A patient's uploaded ID document, required once before non-emergency booking (Day 18).
+    The file is ENCRYPTED before being written to disk (see apps/users/encryption.py) —
+    never accessible via Django's normal media URL serving, only through the
+    access-controlled download view.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="identity_documents")
+    document_type = models.CharField(max_length=20, choices=DocumentType.choices)
+    encrypted_file = models.FileField(upload_to="identity_documents/%Y/%m/")
+    name_on_document = models.CharField(max_length=255)  # self-reported by the patient at upload time
+    name_match_result = models.CharField(max_length=20, choices=NameMatchResult.choices)
+    name_match_score = models.FloatField()  # 0.0-1.0 similarity ratio, for admin review context
+
+    # Manual review (platform admin, Day 19's dashboard) — a mismatch doesn't block booking
+    # today (soft signal, matching Day 17's philosophy), but a human can review and override.
+    reviewed = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_documents"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.document_type} for {self.user} ({self.name_match_result})"

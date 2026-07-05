@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import OTPPurpose
+from .models import IdentityDocument, NameMatchResult, OTPPurpose
 
 User = get_user_model()
 
@@ -68,3 +68,54 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["phone_verified"] = user.phone_verified
         token["full_name"] = user.get_full_name() or user.username
         return token
+
+
+class IdentityDocumentUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IdentityDocument
+        fields = ["id", "document_type", "encrypted_file", "name_on_document"]
+        extra_kwargs = {"encrypted_file": {"write_only": True}}
+
+    def create(self, validated_data):
+        from .encryption import encrypt_bytes
+        from .name_matching import compute_name_match
+        from django.core.files.base import ContentFile
+
+        request = self.context["request"]
+        uploaded_file = validated_data.pop("encrypted_file")
+        name_on_document = validated_data["name_on_document"]
+
+        raw_bytes = uploaded_file.read()
+        encrypted_bytes = encrypt_bytes(raw_bytes)
+
+        account_name = request.user.get_full_name() or request.user.username
+        match_result, match_score = compute_name_match(account_name, name_on_document)
+
+        doc = IdentityDocument.objects.create(
+            user=request.user,
+            document_type=validated_data["document_type"],
+            name_on_document=name_on_document,
+            name_match_result=match_result,
+            name_match_score=match_score,
+        )
+        doc.encrypted_file.save(
+            f"{request.user.id}_{uploaded_file.name}",
+            ContentFile(encrypted_bytes),
+            save=True,
+        )
+
+        # Auto-verify on a confident match; anything less gets left for manual review
+        # (Day 19's platform admin dashboard) rather than silently trusting a shaky match.
+        if match_result == NameMatchResult.EXACT_MATCH:
+            request.user.id_document_verified = True
+            request.user.save(update_fields=["id_document_verified"])
+
+        return doc
+
+
+class IdentityDocumentStatusSerializer(serializers.ModelSerializer):
+    """Read-only status view for the patient — never exposes the encrypted file itself."""
+    class Meta:
+        model = IdentityDocument
+        fields = ["id", "document_type", "name_on_document", "name_match_result", "uploaded_at"]
+        read_only_fields = fields

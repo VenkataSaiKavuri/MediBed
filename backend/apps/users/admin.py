@@ -1,7 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import OneTimePassword, User
+from .models import IdentityDocument, OneTimePassword, User
+
+
+@admin.register(IdentityDocument)
+class IdentityDocumentAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "document_type", "name_on_document", "name_match_result", "reviewed", "uploaded_at")
+    list_filter = ("document_type", "name_match_result", "reviewed")
+    search_fields = ("user__username", "user__phone_number", "name_on_document")
+    readonly_fields = ("encrypted_file", "name_match_score")
+    # Note: encrypted_file shows as a raw file link here — clicking it downloads the
+    # ENCRYPTED bytes, which are unreadable without going through the decrypt endpoint.
+    # Use the DownloadIdentityDocumentView API (platform_admin only) to actually view a document.
 
 
 @admin.register(OneTimePassword)

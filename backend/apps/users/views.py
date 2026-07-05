@@ -1,13 +1,22 @@
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status
+from django.http import HttpResponse
+from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from apps.core.permissions import IsPatient
+
+from .encryption import decrypt_bytes
+from .models import IdentityDocument
 from .otp_utils import generate_and_send_otp, verify_otp
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    IdentityDocumentStatusSerializer,
+    IdentityDocumentUploadSerializer,
     RequestOTPSerializer,
     SignupSerializer,
     UserProfileSerializer,
@@ -86,3 +95,48 @@ class RegisterFCMTokenView(APIView):
         request.user.fcm_token = token
         request.user.save(update_fields=["fcm_token"])
         return Response({"message": "Token registered."})
+
+
+class UploadIdentityDocumentView(APIView):
+    """Patient uploads their Aadhaar/passport. Encrypted before being written to disk;
+    the raw file is never stored or returned as-is."""
+    permission_classes = [permissions.IsAuthenticated, IsPatient]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = IdentityDocumentUploadSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        doc = serializer.save()
+        return Response(IdentityDocumentStatusSerializer(doc).data, status=201)
+
+
+class MyIdentityDocumentsView(generics.ListAPIView):
+    """Patient's own upload history/status — never exposes the encrypted file itself."""
+    serializer_class = IdentityDocumentStatusSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPatient]
+
+    def get_queryset(self):
+        return IdentityDocument.objects.filter(user=self.request.user).order_by("-uploaded_at")
+
+
+class DownloadIdentityDocumentView(APIView):
+    """
+    Strictly access-controlled: only the document's own patient, or a platform_admin
+    (for manual review), can decrypt and download it. Never served via normal media URLs.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        doc = generics.get_object_or_404(IdentityDocument, pk=pk)
+        is_owner = doc.user_id == request.user.id
+        is_platform_admin = request.user.role == "platform_admin"
+        if not (is_owner or is_platform_admin):
+            raise PermissionDenied("You don't have access to this document.")
+
+        with doc.encrypted_file.open("rb") as f:
+            encrypted_bytes = f.read()
+        decrypted_bytes = decrypt_bytes(encrypted_bytes)
+
+        response = HttpResponse(decrypted_bytes, content_type="application/octet-stream")
+        response["Content-Disposition"] = f'attachment; filename="{doc.document_type}_{doc.user_id}"'
+        return response
