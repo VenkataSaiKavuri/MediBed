@@ -26,11 +26,21 @@ class Booking(models.Model):
 
     scheduled_time = models.DateTimeField(null=True, blank=True)  # non-emergency bookings only
     sla_deadline = models.DateTimeField(null=True, blank=True)     # hospital must respond by this time
+    confirmed_at = models.DateTimeField(null=True, blank=True)     # set when status -> confirmed; anchors
+                                                                     # the no-show grace period (Day 15) when
+                                                                     # scheduled_time wasn't provided
 
     # --- Anti-fraud / deposit fields ---
     deposit_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     deposit_paid = models.BooleanField(default=False)
     deposit_refunded = models.BooleanField(default=False)
+    deposit_forfeited = models.BooleanField(default=False)  # true on no-show — the whole point of the deposit
+
+    # Razorpay tracking — order created at booking time, payment_id captured after checkout,
+    # refund_id captured if/when the deposit is returned
+    razorpay_order_id = models.CharField(max_length=100, blank=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True)
+    razorpay_refund_id = models.CharField(max_length=100, blank=True)
 
     # --- Audit trail (critical for emergency fraud review, Day 25) ---
     device_id = models.CharField(max_length=255, blank=True)

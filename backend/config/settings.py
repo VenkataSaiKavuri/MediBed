@@ -127,6 +127,11 @@ SMS_API_KEY = os.environ.get("SMS_API_KEY", "")
 PAYMENT_GATEWAY_KEY = os.environ.get("PAYMENT_GATEWAY_KEY", "")
 PAYMENT_GATEWAY_SECRET = os.environ.get("PAYMENT_GATEWAY_SECRET", "")
 
+# Razorpay — leave blank to run in dev-stub mode (see apps/bookings/payments.py).
+# Get free test keys at https://dashboard.razorpay.com/app/keys when ready.
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
 # --- Celery (background jobs: SLA timers, no-show detection, notifications) ---
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

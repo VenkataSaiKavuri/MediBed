@@ -6,6 +6,7 @@ from rest_framework import serializers
 from apps.hospitals.models import BedType
 
 from .models import Booking, BookingStatus, BookingStatusLog
+from .payments import create_order, get_deposit_amount
 
 # Matches the original plan's Day 10 spec: 2 hours for hospitals to respond to a
 # non-emergency booking request. Emergency bookings (Day 23) get a much shorter SLA.
@@ -33,22 +34,36 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "patient", "patient_name", "patient_phone", "hospital", "hospital_name",
             "doctor", "doctor_name", "bed_type", "status", "is_emergency", "condition_category",
-            "scheduled_time", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
+            "scheduled_time", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
         read_only_fields = [
-            "id", "status", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
+            "id", "status", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
 
 
 class CreateBookingSerializer(serializers.ModelSerializer):
     """Non-emergency booking creation — patient picks hospital, bed type, doctor (optional), time."""
+    razorpay_key_id = serializers.SerializerMethodField()
+    is_stub_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
-        fields = ["id", "hospital", "doctor", "bed_type", "scheduled_time", "condition_category", "sla_deadline"]
-        read_only_fields = ["id", "sla_deadline"]
+        fields = [
+            "id", "hospital", "doctor", "bed_type", "scheduled_time", "condition_category",
+            "sla_deadline", "deposit_amount", "razorpay_order_id", "razorpay_key_id", "is_stub_payment",
+        ]
+        read_only_fields = ["id", "sla_deadline", "deposit_amount", "razorpay_order_id"]
+
+    def get_razorpay_key_id(self, obj):
+        from django.conf import settings
+        return settings.RAZORPAY_KEY_ID or None
+
+    def get_is_stub_payment(self, obj):
+        return obj.razorpay_order_id.startswith("order_dev_")
 
     def validate_bed_type(self, value):
         if value not in BedType.values:
@@ -61,12 +76,20 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         hospital = attrs.get("hospital")
         if doctor and hospital and doctor.hospital_id != hospital.id:
             raise serializers.ValidationError("Selected doctor does not belong to the selected hospital.")
+        # A patient shouldn't be able to request a doctor who's currently off-duty — the
+        # frontend already filters these out of the dropdown, but the API must enforce it
+        # too, since anyone could bypass the UI and post a doctor ID directly.
+        if doctor and not doctor.is_on_duty:
+            raise serializers.ValidationError("Selected doctor is not currently on duty.")
         return attrs
 
     def create(self, validated_data):
         from apps.core.notifications import notify_booking_status_change
 
         request = self.context["request"]
+        bed_type = validated_data["bed_type"]
+        deposit_amount = get_deposit_amount(bed_type)
+
         booking = Booking.objects.create(
             patient=request.user,
             status=BookingStatus.REQUESTED,
@@ -74,13 +97,24 @@ class CreateBookingSerializer(serializers.ModelSerializer):
             device_id=request.headers.get("X-Device-Id", ""),
             ip_address=request.META.get("REMOTE_ADDR"),
             sla_deadline=timezone.now() + timedelta(hours=SCHEDULED_BOOKING_SLA_HOURS),
+            deposit_amount=deposit_amount,
             **validated_data,
         )
+
+        order = create_order(deposit_amount, receipt=f"booking-{booking.id}")
+        booking.razorpay_order_id = order["id"]
+        booking.save(update_fields=["razorpay_order_id"])
+
         try:
             notify_booking_status_change(booking)
         except Exception as e:  # noqa: BLE001 — never let a notification failure break booking creation
             print(f"[notification error] Failed to notify new booking {booking.id}: {e}")
         return booking
+
+
+class VerifyPaymentSerializer(serializers.Serializer):
+    razorpay_payment_id = serializers.CharField()
+    razorpay_signature = serializers.CharField(required=False, allow_blank=True)
 
 
 class TransitionBookingSerializer(serializers.Serializer):

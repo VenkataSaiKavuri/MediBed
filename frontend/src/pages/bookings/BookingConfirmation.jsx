@@ -70,6 +70,17 @@ export default function BookingConfirmation() {
         {booking.doctor_name && <Row label="Doctor" value={booking.doctor_name} />}
         {booking.scheduled_time && <Row label="Scheduled" value={new Date(booking.scheduled_time).toLocaleString()} />}
         {booking.condition_category && <Row label="Reason" value={booking.condition_category} />}
+        {Number(booking.deposit_amount) > 0 && (
+          <Row
+            label="Deposit"
+            value={
+              booking.deposit_forfeited ? `₹${booking.deposit_amount} (forfeited)`
+              : booking.deposit_refunded ? `₹${booking.deposit_amount} (refunded)`
+              : booking.deposit_paid ? `₹${booking.deposit_amount} (held)`
+              : "Not paid"
+            }
+          />
+        )}
         <Row label="Requested" value={new Date(booking.created_at).toLocaleString()} />
       </div>
 
