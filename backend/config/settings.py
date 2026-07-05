@@ -89,6 +89,14 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+# Identity document uploads (Day 18) — files are encrypted before being written here (see
+# apps/users/encryption.py), so even direct filesystem access wouldn't expose readable IDs.
+# Never served via Django's normal static/media URL serving — always through the
+# access-controlled download view in apps/users/views.py.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- DRF ---
@@ -131,6 +139,11 @@ PAYMENT_GATEWAY_SECRET = os.environ.get("PAYMENT_GATEWAY_SECRET", "")
 # Get free test keys at https://dashboard.razorpay.com/app/keys when ready.
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
+# Identity document encryption (Day 18). Leave blank in dev — a key gets derived from
+# SECRET_KEY automatically (see apps/users/encryption.py). MUST be set explicitly in
+# production via a real secret (e.g. Fernet.generate_key()), never left to the dev fallback.
+ID_DOCUMENT_ENCRYPTION_KEY = os.environ.get("ID_DOCUMENT_ENCRYPTION_KEY", "")
 
 # --- Celery (background jobs: SLA timers, no-show detection, notifications) ---
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

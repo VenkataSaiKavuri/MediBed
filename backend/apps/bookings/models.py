@@ -48,6 +48,12 @@ class Booking(models.Model):
     patient_latitude = models.FloatField(null=True, blank=True)
     patient_longitude = models.FloatField(null=True, blank=True)
 
+    # --- Bot/fraud pattern flags (Day 17) — soft signals for platform admin review (Day 19),
+    # not auto-blocks. A shared family device or hospital kiosk can legitimately trigger these,
+    # so they're surfaced for a human to judge rather than silently rejected. ---
+    is_suspicious = models.BooleanField(default=False)
+    fraud_flags = models.JSONField(default=list, blank=True)  # list of short reason strings
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

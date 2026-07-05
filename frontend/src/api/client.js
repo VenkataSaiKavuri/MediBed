@@ -49,6 +49,11 @@ export const authAPI = {
   login: (username, password) => client.post("/auth/login/", { username, password }),
   me: () => client.get("/auth/me/"),
   registerFcmToken: (fcm_token) => client.post("/auth/fcm-token/", { fcm_token }),
+  uploadIdentityDocument: (formData) =>
+    client.post("/auth/identity-documents/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  myIdentityDocuments: () => client.get("/auth/identity-documents/mine/"),
 };
 
 export const hospitalsAPI = {
