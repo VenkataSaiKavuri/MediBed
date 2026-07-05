@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.notifications import notify_booking_status_change
+from apps.core.reputation import LATE_CANCEL_PENALTY, COMPLETED_REWARD, NO_SHOW_PENALTY, apply_reputation_change
 from apps.hospitals.models import BedInventory
 
 from .models import Booking, BookingStatus, BookingStatusLog
@@ -133,6 +134,7 @@ def transition_booking(booking: Booking, new_status: str, changed_by=None, note:
     # has actually been committed to the DB, not before.
     transaction.on_commit(lambda: _safe_notify(locked_booking))
     transaction.on_commit(lambda: _settle_deposit(locked_booking))
+    transaction.on_commit(lambda: _update_reputation(locked_booking, current_status))
 
     return locked_booking
 
@@ -163,6 +165,29 @@ def _settle_deposit(booking: Booking) -> None:
             booking.save(update_fields=["deposit_forfeited"])
     except Exception as e:  # noqa: BLE001 — a refund API failure must never re-open a closed booking
         print(f"[refund error] Failed to settle deposit for booking {booking.id}: {e}")
+
+
+def _update_reputation(booking: Booking, previous_status: str) -> None:
+    """
+    Reputation only moves on outcomes that reveal something about the patient's reliability:
+    - No-show: always a penalty, regardless of prior status (they had a confirmed bed and
+      never used it — the clearest fraud/unreliability signal there is)
+    - Cancelling a CONFIRMED booking: a smaller penalty — a hospital had already set aside a
+      bed for them, and it went unused, even though they did the "right thing" by cancelling
+      instead of silently no-showing
+    - Cancelling a merely REQUESTED booking: no penalty — nothing was ever held, changing your
+      mind before a hospital even responded is completely normal
+    - Completing a stay: a small reward, since it's a positive reliability signal
+    """
+    try:
+        if booking.status == BookingStatus.NO_SHOW:
+            apply_reputation_change(booking.patient, NO_SHOW_PENALTY, is_no_show=True)
+        elif booking.status == BookingStatus.CANCELLED and previous_status == BookingStatus.CONFIRMED:
+            apply_reputation_change(booking.patient, LATE_CANCEL_PENALTY)
+        elif booking.status == BookingStatus.COMPLETED:
+            apply_reputation_change(booking.patient, COMPLETED_REWARD)
+    except Exception as e:  # noqa: BLE001 — a reputation update failure must never break a booking action
+        print(f"[reputation error] Failed to update reputation for booking {booking.id}: {e}")
 
 
 def can_transition(current_status: str, new_status: str) -> bool:

@@ -71,6 +71,17 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        # Flagged users (repeat no-shows/late-cancellers) lose instant-booking privileges —
+        # this is the actual enforcement point for Day 16's reputation system. Without this
+        # check, flagging a user would just be a label with no real consequence.
+        request = self.context["request"]
+        if request.user.is_flagged:
+            raise serializers.ValidationError(
+                "Your account has restricted booking privileges due to repeated no-shows or "
+                "late cancellations. Please call the hospital directly, or contact support to "
+                "restore instant booking."
+            )
+
         # A doctor, if specified, must belong to the chosen hospital — prevents cross-hospital mismatches
         doctor = attrs.get("doctor")
         hospital = attrs.get("hospital")
