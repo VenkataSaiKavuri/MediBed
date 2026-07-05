@@ -26,6 +26,9 @@ class Booking(models.Model):
 
     scheduled_time = models.DateTimeField(null=True, blank=True)  # non-emergency bookings only
     sla_deadline = models.DateTimeField(null=True, blank=True)     # hospital must respond by this time
+    confirmed_at = models.DateTimeField(null=True, blank=True)     # set when status -> confirmed; anchors
+                                                                     # the no-show grace period (Day 15) when
+                                                                     # scheduled_time wasn't provided
 
     # --- Anti-fraud / deposit fields ---
     deposit_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
@@ -44,6 +47,12 @@ class Booking(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     patient_latitude = models.FloatField(null=True, blank=True)
     patient_longitude = models.FloatField(null=True, blank=True)
+
+    # --- Bot/fraud pattern flags (Day 17) — soft signals for platform admin review (Day 19),
+    # not auto-blocks. A shared family device or hospital kiosk can legitimately trigger these,
+    # so they're surfaced for a human to judge rather than silently rejected. ---
+    is_suspicious = models.BooleanField(default=False)
+    fraud_flags = models.JSONField(default=list, blank=True)  # list of short reason strings
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

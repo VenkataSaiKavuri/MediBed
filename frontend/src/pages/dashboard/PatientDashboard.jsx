@@ -74,6 +74,13 @@ export default function PatientDashboard() {
         </button>
       </div>
 
+      {user?.is_flagged && (
+        <div style={{ padding: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#b91c1c", fontSize: 13, marginBottom: 16 }}>
+          ⚠ Your account has restricted booking privileges due to repeated no-shows or late
+          cancellations. Please call hospitals directly, or contact support to restore instant booking.
+        </div>
+      )}
+
       {/* Emergency booking button — wired up on Day 21 */}
       <button
         style={{

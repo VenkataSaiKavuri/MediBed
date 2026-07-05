@@ -53,7 +53,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "username", "email", "phone_number", "phone_verified",
             "role", "first_name", "last_name", "hospital", "hospital_name",
-            "reputation_score", "is_flagged",
+            "reputation_score", "no_show_count", "is_flagged",
         ]
         read_only_fields = fields
 

@@ -7,6 +7,7 @@ from apps.hospitals.models import BedType
 
 from .models import Booking, BookingStatus, BookingStatusLog
 from .payments import create_order, get_deposit_amount
+from .fraud_detection import evaluate_soft_fraud_signals, has_duplicate_active_booking
 
 # Matches the original plan's Day 10 spec: 2 hours for hospitals to respond to a
 # non-emergency booking request. Emergency bookings (Day 23) get a much shorter SLA.
@@ -34,13 +35,13 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "patient", "patient_name", "patient_phone", "hospital", "hospital_name",
             "doctor", "doctor_name", "bed_type", "status", "is_emergency", "condition_category",
-            "scheduled_time", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
-            "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
+            "scheduled_time", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
         read_only_fields = [
-            "id", "status", "sla_deadline", "deposit_amount", "deposit_paid", "deposit_refunded",
-            "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
+            "id", "status", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
+            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
             "created_at", "updated_at", "status_logs",
         ]
 
@@ -71,11 +72,37 @@ class CreateBookingSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        # Flagged users (repeat no-shows/late-cancellers) lose instant-booking privileges —
+        # this is the actual enforcement point for Day 16's reputation system. Without this
+        # check, flagging a user would just be a label with no real consequence.
+        request = self.context["request"]
+        if request.user.is_flagged:
+            raise serializers.ValidationError(
+                "Your account has restricted booking privileges due to repeated no-shows or "
+                "late cancellations. Please call the hospital directly, or contact support to "
+                "restore instant booking."
+            )
+
         # A doctor, if specified, must belong to the chosen hospital — prevents cross-hospital mismatches
         doctor = attrs.get("doctor")
         hospital = attrs.get("hospital")
         if doctor and hospital and doctor.hospital_id != hospital.id:
             raise serializers.ValidationError("Selected doctor does not belong to the selected hospital.")
+        # A patient shouldn't be able to request a doctor who's currently off-duty — the
+        # frontend already filters these out of the dropdown, but the API must enforce it
+        # too, since anyone could bypass the UI and post a doctor ID directly.
+        if doctor and not doctor.is_on_duty:
+            raise serializers.ValidationError("Selected doctor is not currently on duty.")
+
+        # HARD RULE: block duplicate active bookings for the same hospital + bed type — this
+        # is what actually stops "spam the same bed 5 times" abuse that a plain hourly rate
+        # limit alone doesn't catch.
+        bed_type = attrs.get("bed_type")
+        if bed_type and hospital and has_duplicate_active_booking(request.user, hospital, bed_type):
+            raise serializers.ValidationError(
+                "You already have an active request for this bed type at this hospital. "
+                "Cancel it first if you'd like to submit a new one."
+            )
         return attrs
 
     def create(self, validated_data):
@@ -98,7 +125,18 @@ class CreateBookingSerializer(serializers.ModelSerializer):
 
         order = create_order(deposit_amount, receipt=f"booking-{booking.id}")
         booking.razorpay_order_id = order["id"]
-        booking.save(update_fields=["razorpay_order_id"])
+
+        # Soft fraud signals — never block creation over these, just flag for platform admin
+        # review (Day 19's dashboard). A shared device/IP or a burst of bookings can be
+        # completely legitimate (family member booking for several relatives during a real
+        # emergency), so a human should judge these, not the system.
+        fraud_reasons = evaluate_soft_fraud_signals(booking)
+        if fraud_reasons:
+            booking.is_suspicious = True
+            booking.fraud_flags = fraud_reasons
+            booking.save(update_fields=["razorpay_order_id", "is_suspicious", "fraud_flags"])
+        else:
+            booking.save(update_fields=["razorpay_order_id"])
 
         try:
             notify_booking_status_change(booking)
