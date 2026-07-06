@@ -58,6 +58,7 @@ export const authAPI = {
 
 export const hospitalsAPI = {
   list: (params = {}) => client.get("/hospitals/", { params }),
+  nearest: (lat, lng, bed_type) => client.get("/hospitals/nearest/", { params: { lat, lng, bed_type } }),
   detail: (id) => client.get(`/hospitals/${id}/`),
   mine: () => client.get("/hospitals/mine/"),
 
@@ -80,6 +81,7 @@ export const hospitalsAPI = {
 
 export const bookingsAPI = {
   create: (payload) => client.post("/bookings/", payload),
+  createEmergency: (payload) => client.post("/bookings/emergency/", payload),
   mine: () => client.get("/bookings/mine/"),
   detail: (id) => client.get(`/bookings/${id}/`),
   hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),

@@ -107,6 +107,11 @@ export default function BookingsDashboard() {
               <div>
                 <strong>{b.patient_name || "Unnamed patient"}</strong>
                 <span style={{ marginLeft: 8, fontSize: 12, color: "#999" }}>{b.patient_phone}</span>
+                {b.is_emergency && (
+                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 10, background: "#dc2626", color: "white" }}>
+                    🚨 EMERGENCY
+                  </span>
+                )}
                 <p style={{ margin: "4px 0", fontSize: 14, textTransform: "capitalize" }}>
                   {b.bed_type} bed
                   {b.doctor_name && <> — Dr. {b.doctor_name}</>}

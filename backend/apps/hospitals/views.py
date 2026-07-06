@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import IsHospitalStaff
 
+from .geo import haversine_km
 from .models import BedInventory, Doctor, Equipment, Hospital
 from .serializers import (
     BedInventorySerializer,
@@ -63,6 +64,58 @@ class HospitalDetailView(generics.RetrieveAPIView):
     queryset = Hospital.objects.all()
     serializer_class = HospitalDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class NearestHospitalsView(APIView):
+    """
+    Powers Day 21's emergency flow with real ranking: given the patient's captured lat/lng,
+    returns verified hospitals sorted by distance, optionally filtered to only those with
+    live availability for a specific bed type right now.
+
+    Query params:
+      lat, lng      — required, the patient's current coordinates
+      bed_type      — optional; if given, hospitals with 0 available beds of that type are
+                       excluded entirely rather than just ranked lower, since showing a
+                       hospital with zero beds during an emergency wastes precious time
+      limit         — optional, default 10, caps how many results come back
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            lat = float(request.query_params["lat"])
+            lng = float(request.query_params["lng"])
+        except (KeyError, ValueError):
+            return Response(
+                {"detail": "lat and lng query parameters are required and must be numeric."},
+                status=400,
+            )
+
+        bed_type = request.query_params.get("bed_type")
+        limit = int(request.query_params.get("limit", 10))
+
+        hospitals = Hospital.objects.filter(is_verified=True).prefetch_related("bed_inventory", "doctors")
+
+        results = []
+        for hospital in hospitals:
+            if bed_type:
+                bed = next((b for b in hospital.bed_inventory.all() if b.bed_type == bed_type), None)
+                if not bed or bed.available_count <= 0:
+                    continue  # no point showing a hospital with zero beds during an emergency
+
+            distance = haversine_km(lat, lng, hospital.latitude, hospital.longitude)
+            results.append((distance, hospital))
+
+        results.sort(key=lambda pair: pair[0])
+        results = results[:limit]
+
+        serialized = []
+        for distance, hospital in results:
+            data = HospitalListSerializer(hospital).data
+            data["distance_km"] = round(distance, 1)
+            serialized.append(data)
+
+        return Response(serialized)
 
 
 class MyHospitalView(APIView):
