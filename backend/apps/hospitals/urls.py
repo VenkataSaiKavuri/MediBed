@@ -8,6 +8,7 @@ from .views import (
     HospitalDetailView,
     HospitalListView,
     MyHospitalView,
+    NearestHospitalsView,
 )
 
 app_name = "hospitals"
@@ -19,6 +20,7 @@ router.register("mine/equipment", EquipmentViewSet, basename="equipment")
 
 urlpatterns = [
     path("", HospitalListView.as_view(), name="list"),
+    path("nearest/", NearestHospitalsView.as_view(), name="nearest"),
     path("mine/", MyHospitalView.as_view(), name="mine"),
     path("<int:pk>/", HospitalDetailView.as_view(), name="detail"),
     path("", include(router.urls)),
