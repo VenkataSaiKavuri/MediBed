@@ -84,7 +84,12 @@ export const bookingsAPI = {
   createEmergency: (payload) => client.post("/bookings/emergency/", payload),
   mine: () => client.get("/bookings/mine/"),
   detail: (id) => client.get(`/bookings/${id}/`),
-  hospitalList: (status) => client.get("/bookings/hospital/", { params: status ? { status } : {} }),
+  hospitalList: (status, isEmergency) => client.get("/bookings/hospital/", {
+    params: {
+      ...(status ? { status } : {}),
+      ...(isEmergency !== undefined ? { is_emergency: isEmergency } : {}),
+    },
+  }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
   verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
 };
