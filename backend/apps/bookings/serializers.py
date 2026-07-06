@@ -202,7 +202,7 @@ class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        from apps.core.notifications import notify_booking_status_change
+        from apps.core.notifications import notify_booking_status_change, notify_hospital_of_emergency
 
         request = self.context["request"]
         booking = Booking.objects.create(
@@ -219,4 +219,10 @@ class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
             notify_booking_status_change(booking)
         except Exception as e:  # noqa: BLE001 — never let a notification failure delay an emergency booking
             print(f"[notification error] Failed to notify emergency booking {booking.id}: {e}")
+
+        try:
+            notify_hospital_of_emergency(booking)
+        except Exception as e:  # noqa: BLE001 — same principle: never let this block booking creation
+            print(f"[notification error] Failed to alert hospital for emergency booking {booking.id}: {e}")
+
         return booking
