@@ -17,32 +17,52 @@ export default function EmergencyBooking() {
   const [condition, setCondition] = useState("");
   const [bedType, setBedType] = useState("emergency");
   const [hospitals, setHospitals] = useState([]);
+  const [hospitalsLoading, setHospitalsLoading] = useState(false);
   const [hospitalId, setHospitalId] = useState("");
   const [location, setLocation] = useState(null);
   const [locationError, setLocationError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Capture location immediately on page load — no reason to wait for the user to tap
+  // anything else first, since every second matters here.
   useEffect(() => {
-    // Capture location immediately on page load — no reason to wait for the user to tap
-    // anything else first, since every second matters here.
     if (!navigator.geolocation) {
       setLocationError("Your browser doesn't support location — you can still continue without it.");
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => setLocationError("Couldn't get your location — you can still continue without it."),
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
+      return;
     }
-
-    // Day 22 will replace this with real nearest-hospital matching by distance. For now,
-    // just load verified hospitals so there's at least something to pick from.
-    hospitalsAPI
-      .list({ ordering: "name" })
-      .then(({ data }) => setHospitals(data.results || data))
-      .catch(() => {});
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setLocationError("Couldn't get your location — you can still continue without it."),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
   }, []);
+
+  // Fetch real nearest-hospital ranking whenever we have a location AND whenever the bed
+  // type changes (different bed types have different availability, so the ranked list itself
+  // can change — a hospital with no ICU beds shouldn't show up when ICU is selected).
+  useEffect(() => {
+    const fetchNearest = async () => {
+      setHospitalsLoading(true);
+      try {
+        if (location) {
+          const { data } = await hospitalsAPI.nearest(location.lat, location.lng, bedType);
+          setHospitals(data);
+          if (data.length > 0) setHospitalId(String(data[0].id)); // auto-select the nearest match
+        } else {
+          // No location yet (denied/unsupported) — fall back to a plain list so the flow
+          // still works, just without distance ranking.
+          const { data } = await hospitalsAPI.list({ bed_type: bedType, ordering: "name" });
+          setHospitals(data.results || data);
+        }
+      } catch {
+        setError("Couldn't load nearby hospitals.");
+      } finally {
+        setHospitalsLoading(false);
+      }
+    };
+    fetchNearest();
+  }, [location, bedType]);
 
   const handleSubmit = async () => {
     if (!condition) {
@@ -119,25 +139,43 @@ export default function EmergencyBooking() {
           ))}
         </select>
 
-        <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block" }}>
-          Hospital
-        </label>
-        <select
-          value={hospitalId}
-          onChange={(e) => setHospitalId(e.target.value)}
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #ddd", marginBottom: 8 }}
-        >
-          <option value="">Select a hospital...</option>
-          {hospitals.map((h) => (
-            <option key={h.id} value={h.id}>{h.name} — {h.city}</option>
-          ))}
-        </select>
-        <p style={{ fontSize: 11, color: "#999", marginTop: 0, marginBottom: 16 }}>
-          Automatic nearest-hospital matching is coming soon — for now, please pick manually.
-        </p>
+        <div style={{ fontSize: 12, color: location ? "#16a34a" : "#d97706", marginBottom: 12 }}>
+          {location ? "📍 Location captured — hospitals sorted by distance" : locationError || "📍 Getting your location..."}
+        </div>
 
-        <div style={{ fontSize: 12, color: location ? "#16a34a" : "#d97706", marginBottom: 16 }}>
-          {location ? "📍 Location captured" : locationError || "📍 Getting your location..."}
+        <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block" }}>
+          Hospital {hospitalsLoading && <span style={{ fontWeight: 400, color: "#999" }}>(loading...)</span>}
+        </label>
+        {!hospitalsLoading && hospitals.length === 0 && (
+          <p style={{ fontSize: 13, color: "#dc2626", marginTop: 0 }}>
+            No hospitals currently have an available {bedType} bed. Try a different bed type, or call emergency services directly.
+          </p>
+        )}
+        <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+          {hospitals.map((h) => (
+            <button
+              key={h.id}
+              onClick={() => setHospitalId(String(h.id))}
+              style={{
+                padding: 12, borderRadius: 10, textAlign: "left", cursor: "pointer",
+                border: hospitalId === String(h.id) ? "2px solid #2563eb" : "1px solid #ddd",
+                background: hospitalId === String(h.id) ? "#eff6ff" : "white",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <strong style={{ fontSize: 14 }}>{h.name}</strong>
+                {h.distance_km != null && (
+                  <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 700 }}>{h.distance_km} km away</span>
+                )}
+              </div>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#666" }}>{h.city}</p>
+              {h.available_beds?.[bedType] != null && (
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#16a34a" }}>
+                  {h.available_beds[bedType]} {bedType} bed{h.available_beds[bedType] === 1 ? "" : "s"} available
+                </p>
+              )}
+            </button>
+          ))}
         </div>
 
         {error && <p className="error-text">{error}</p>}

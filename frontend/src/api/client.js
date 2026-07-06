@@ -58,6 +58,7 @@ export const authAPI = {
 
 export const hospitalsAPI = {
   list: (params = {}) => client.get("/hospitals/", { params }),
+  nearest: (lat, lng, bed_type) => client.get("/hospitals/nearest/", { params: { lat, lng, bed_type } }),
   detail: (id) => client.get(`/hospitals/${id}/`),
   mine: () => client.get("/hospitals/mine/"),
 
