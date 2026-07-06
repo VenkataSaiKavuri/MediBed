@@ -73,6 +73,9 @@ class HospitalBookingsView(generics.ListAPIView):
         status_filter = self.request.query_params.get("status")
         if status_filter:
             qs = qs.filter(status=status_filter)
+        is_emergency_filter = self.request.query_params.get("is_emergency")
+        if is_emergency_filter is not None:
+            qs = qs.filter(is_emergency=is_emergency_filter.lower() == "true")
         return qs
 
 

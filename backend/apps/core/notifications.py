@@ -106,3 +106,26 @@ def notify_booking_status_change(booking) -> None:
             send_push(fcm_token, push_title, _fill(push_body_template, booking))
         except NotImplementedError:
             pass
+
+
+def notify_hospital_of_emergency(booking) -> None:
+    """
+    Day 23: instant alert straight to the hospital when an emergency request lands — this is
+    hospital-facing, not patient-facing, so it doesn't use the per-status templates above.
+    Sent to the hospital's registered phone number (Hospital.phone_number). In production this
+    should go to whichever number/system a hospital actually monitors in real time — a shared
+    front-desk phone, a dedicated on-call line, etc. — configurable per hospital in a future
+    iteration if a single number per hospital proves too coarse.
+    """
+    from apps.users.otp_utils import send_sms
+
+    message = (
+        f"URGENT MedBeds Alert: Emergency {booking.bed_type} bed request "
+        f"({booking.condition_category or 'unspecified condition'}) from "
+        f"{booking.patient.get_full_name() or booking.patient.username} "
+        f"({booking.patient.phone_number}). Respond within 15 minutes in the MedBeds dashboard."
+    )
+    try:
+        send_sms(booking.hospital.phone_number, message)
+    except NotImplementedError:
+        pass  # Production without a real SMS provider configured yet — don't crash booking creation over it
