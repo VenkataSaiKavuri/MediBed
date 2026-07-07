@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import IsHospitalStaff
 
-from .geo import haversine_km
+from .matching import find_ranked_hospitals
 from .models import BedInventory, Doctor, Equipment, Hospital
 from .serializers import (
     BedInventorySerializer,
@@ -94,23 +94,10 @@ class NearestHospitalsView(APIView):
         bed_type = request.query_params.get("bed_type")
         limit = int(request.query_params.get("limit", 10))
 
-        hospitals = Hospital.objects.filter(is_verified=True).prefetch_related("bed_inventory", "doctors")
-
-        results = []
-        for hospital in hospitals:
-            if bed_type:
-                bed = next((b for b in hospital.bed_inventory.all() if b.bed_type == bed_type), None)
-                if not bed or bed.available_count <= 0:
-                    continue  # no point showing a hospital with zero beds during an emergency
-
-            distance = haversine_km(lat, lng, hospital.latitude, hospital.longitude)
-            results.append((distance, hospital))
-
-        results.sort(key=lambda pair: pair[0])
-        results = results[:limit]
+        ranked = find_ranked_hospitals(lat, lng, bed_type=bed_type, limit=limit)
 
         serialized = []
-        for distance, hospital in results:
+        for distance, hospital in ranked:
             data = HospitalListSerializer(hospital).data
             data["distance_km"] = round(distance, 1)
             serialized.append(data)

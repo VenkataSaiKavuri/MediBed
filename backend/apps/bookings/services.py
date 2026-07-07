@@ -18,7 +18,10 @@ from .payments import refund_payment
 ALLOWED_TRANSITIONS = {
     BookingStatus.REQUESTED: {BookingStatus.CONFIRMED, BookingStatus.REJECTED, BookingStatus.CANCELLED, BookingStatus.ESCALATED},
     BookingStatus.CONFIRMED: {BookingStatus.COMPLETED, BookingStatus.CANCELLED, BookingStatus.NO_SHOW},
-    BookingStatus.ESCALATED: {BookingStatus.CONFIRMED, BookingStatus.REJECTED},
+    # ESCALATED is transient — it exists mainly as an audit marker in the status log ("this
+    # hospital didn't respond in time") before immediately moving back to REQUESTED against
+    # the newly-assigned hospital, re-entering the exact same pending/alert/SLA pipeline.
+    BookingStatus.ESCALATED: {BookingStatus.CONFIRMED, BookingStatus.REJECTED, BookingStatus.REQUESTED},
     # Terminal states — nothing can transition out of these
     BookingStatus.REJECTED: set(),
     BookingStatus.COMPLETED: set(),
