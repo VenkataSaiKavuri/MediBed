@@ -6,6 +6,7 @@ const TABS = [
   { key: "users", label: "Flagged Users" },
   { key: "bookings", label: "Suspicious Bookings" },
   { key: "documents", label: "Pending ID Reviews" },
+  { key: "emergencies", label: "Emergency Audit Log" },
 ];
 
 export default function PlatformAdminDashboard() {
@@ -27,7 +28,8 @@ export default function PlatformAdminDashboard() {
     const call =
       activeTab === "users" ? fraudAPI.flaggedUsers()
       : activeTab === "bookings" ? fraudAPI.suspiciousBookings()
-      : fraudAPI.pendingDocuments();
+      : activeTab === "documents" ? fraudAPI.pendingDocuments()
+      : fraudAPI.emergencyAudit();
 
     call
       .then(({ data }) => setData(data.results || data))
@@ -105,7 +107,8 @@ export default function PlatformAdminDashboard() {
           const count = summary && (
             tab.key === "users" ? summary.flagged_users_count
             : tab.key === "bookings" ? summary.suspicious_bookings_count
-            : summary.pending_documents_count
+            : tab.key === "documents" ? summary.pending_documents_count
+            : summary.emergency_bookings_count
           );
           return (
             <button
@@ -190,6 +193,45 @@ export default function PlatformAdminDashboard() {
               Reject
             </button>
           </div>
+        </div>
+      ))}
+      {/* --- Emergency Audit Log tab --- */}
+      {activeTab === "emergencies" && data.map((e) => (
+        <div key={e.id} style={{ ...cardStyle, flexDirection: "column", alignItems: "stretch" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div>
+              <strong>{e.patient_name}</strong>
+              <span style={{ marginLeft: 8, fontSize: 12, color: "#999" }}>{e.patient_phone}</span>
+              {e.is_suspicious && (
+                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 10, background: "#fef2f2", color: "#dc2626" }}>
+                  ⚠ Flagged
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: 12, color: "#999" }}>{new Date(e.created_at).toLocaleString()}</span>
+          </div>
+
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>
+            {e.bed_type} bed — {e.condition_category || "unspecified"} — status: <strong>{e.status}</strong>
+          </p>
+
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#666" }}>
+            Current hospital: {e.hospital_name}
+            {e.previous_hospital_names?.length > 0 && (
+              <> · Previously tried: {e.previous_hospital_names.join(", ")} ({e.escalation_count} escalation{e.escalation_count === 1 ? "" : "s"})</>
+            )}
+          </p>
+
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>
+            Device: {e.device_id || "—"} · IP: {e.ip_address || "—"}
+            {e.patient_latitude != null && <> · Location: {e.patient_latitude.toFixed(4)}, {e.patient_longitude.toFixed(4)}</>}
+          </p>
+
+          {e.fraud_flags?.length > 0 && (
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#dc2626" }}>
+              {e.fraud_flags.join("; ")}
+            </p>
+          )}
         </div>
       ))}
     </div>
