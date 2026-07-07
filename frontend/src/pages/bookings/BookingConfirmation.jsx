@@ -9,7 +9,7 @@ const STATUS_LABELS = {
   completed: { label: "Completed", color: "#2563eb", bg: "#dbeafe" },
   cancelled: { label: "Cancelled", color: "#666", bg: "#f3f4f6" },
   no_show: { label: "Marked as no-show", color: "#dc2626", bg: "#fef2f2" },
-  escalated: { label: "Escalated to another hospital", color: "#d97706", bg: "#fef3c7" },
+  escalated: { label: "Finding you another hospital...", color: "#d97706", bg: "#fef3c7" },
 };
 
 export default function BookingConfirmation() {
@@ -30,6 +30,16 @@ export default function BookingConfirmation() {
   useEffect(() => {
     load();
   }, [id]);
+
+  // Emergency bookings can change hospital/status server-side (auto-escalation, Day 24)
+  // without the patient doing anything — poll while it's still in-flight so they see updates
+  // without needing to manually refresh during what's already a stressful moment.
+  useEffect(() => {
+    if (!booking?.is_emergency) return;
+    if (!["requested", "escalated"].includes(booking.status)) return;
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [booking?.is_emergency, booking?.status, id]);
 
   const handleCancel = async () => {
     if (!confirm("Cancel this booking request?")) return;
@@ -75,6 +85,9 @@ export default function BookingConfirmation() {
         {booking.doctor_name && <Row label="Doctor" value={booking.doctor_name} />}
         {booking.scheduled_time && <Row label="Scheduled" value={new Date(booking.scheduled_time).toLocaleString()} />}
         {booking.condition_category && <Row label="Reason" value={booking.condition_category} />}
+        {booking.escalation_count > 0 && (
+          <Row label="Hospital changes" value={`Escalated ${booking.escalation_count} time${booking.escalation_count === 1 ? "" : "s"}`} />
+        )}
         {Number(booking.deposit_amount) > 0 && (
           <Row
             label="Deposit"
