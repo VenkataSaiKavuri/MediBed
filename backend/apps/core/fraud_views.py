@@ -9,6 +9,7 @@ from apps.core.permissions import IsPlatformAdmin
 from apps.users.models import IdentityDocument, User
 
 from .fraud_serializers import (
+    EmergencyAuditSerializer,
     FlaggedUserSerializer,
     IdentityDocumentReviewSerializer,
     ReviewActionSerializer,
@@ -28,6 +29,7 @@ class FraudDashboardSummaryView(APIView):
             "pending_documents_count": IdentityDocument.objects.filter(reviewed=False).exclude(
                 name_match_result="exact_match"
             ).count(),
+            "emergency_bookings_count": Booking.objects.filter(is_emergency=True).count(),
         })
 
 
@@ -70,6 +72,18 @@ class ClearBookingFlagView(APIView):
         booking.is_suspicious = False
         booking.save(update_fields=["is_suspicious"])
         return Response(BookingSerializer(booking).data)
+
+
+class EmergencyAuditLogView(generics.ListAPIView):
+    """
+    Day 25: every emergency booking, most recent first — regardless of whether a fraud
+    signal fired. This is the accountability side of Day 21's trade-off (emergency bookings
+    skip real-time fraud gates for speed): nothing is hidden, everything is reviewable here,
+    with the full device/IP/geolocation/escalation trail attached.
+    """
+    serializer_class = EmergencyAuditSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    queryset = Booking.objects.filter(is_emergency=True).order_by("-created_at")
 
 
 class PendingIdentityDocumentsListView(generics.ListAPIView):

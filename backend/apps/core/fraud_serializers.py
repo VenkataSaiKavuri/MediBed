@@ -43,3 +43,30 @@ class IdentityDocumentReviewSerializer(serializers.ModelSerializer):
 
 class ReviewActionSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["approve", "reject"])
+
+
+class EmergencyAuditSerializer(BookingSerializer):
+    """
+    Full post-hoc audit trail for an emergency booking (Day 25) — every emergency is
+    reviewable here regardless of whether a fraud signal actually fired, since the whole
+    point of the emergency path is that it skipped real-time checks by design. This is
+    where that trade-off gets its accountability: a human can look back and see exactly
+    what happened, from what device, where, and how the request moved between hospitals.
+    """
+    device_id = serializers.CharField(read_only=True)
+    ip_address = serializers.CharField(read_only=True)
+    fraud_flags = serializers.JSONField(read_only=True)
+    previous_hospital_names = serializers.SerializerMethodField()
+
+    class Meta(BookingSerializer.Meta):
+        fields = BookingSerializer.Meta.fields + [
+            "device_id", "ip_address", "patient_latitude", "patient_longitude",
+            "fraud_flags", "is_suspicious", "previous_hospital_names",
+        ]
+
+    def get_previous_hospital_names(self, obj):
+        if not obj.previous_hospital_ids:
+            return []
+        from apps.hospitals.models import Hospital
+        names = Hospital.objects.filter(id__in=obj.previous_hospital_ids).values_list("name", flat=True)
+        return list(names)

@@ -102,6 +102,7 @@ export const fraudAPI = {
   clearBookingFlag: (id) => client.post(`/admin-panel/suspicious-bookings/${id}/clear/`),
   pendingDocuments: () => client.get("/admin-panel/pending-documents/"),
   reviewDocument: (id, action) => client.post(`/admin-panel/pending-documents/${id}/review/`, { action }),
+  emergencyAudit: () => client.get("/admin-panel/emergency-audit/"),
 };
 
 export default client;
