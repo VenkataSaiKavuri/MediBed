@@ -2,6 +2,7 @@ from django.urls import path
 
 from .fraud_views import (
     ClearBookingFlagView,
+    EmergencyAuditLogView,
     FlaggedUsersListView,
     FraudDashboardSummaryView,
     PendingIdentityDocumentsListView,
@@ -20,4 +21,5 @@ urlpatterns = [
     path("suspicious-bookings/<int:pk>/clear/", ClearBookingFlagView.as_view(), name="clear-booking-flag"),
     path("pending-documents/", PendingIdentityDocumentsListView.as_view(), name="pending-documents"),
     path("pending-documents/<int:pk>/review/", ReviewIdentityDocumentView.as_view(), name="review-document"),
+    path("emergency-audit/", EmergencyAuditLogView.as_view(), name="emergency-audit"),
 ]
