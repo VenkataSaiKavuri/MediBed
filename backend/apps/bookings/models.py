@@ -30,6 +30,13 @@ class Booking(models.Model):
                                                                      # the no-show grace period (Day 15) when
                                                                      # scheduled_time wasn't provided
 
+    # --- Auto-escalation tracking (Day 24) — emergency-only. When a hospital doesn't respond
+    # within the SLA, the booking gets reassigned to the next-nearest hospital automatically.
+    escalation_count = models.PositiveIntegerField(default=0)
+    previous_hospital_ids = models.JSONField(default=list, blank=True)  # hospitals already tried,
+                                                                          # so escalation never offers
+                                                                          # the same one twice
+
     # --- Anti-fraud / deposit fields ---
     deposit_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     deposit_paid = models.BooleanField(default=False)
