@@ -225,4 +225,18 @@ class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
         except Exception as e:  # noqa: BLE001 — same principle: never let this block booking creation
             print(f"[notification error] Failed to alert hospital for emergency booking {booking.id}: {e}")
 
+        # Day 25: emergency bookings deliberately skip Day 16-18's real-time fraud gates
+        # (flagged-user block, duplicate check, ID requirement) for speed — but that makes
+        # POST-HOC review even more important than for regular bookings, not less. Run the
+        # same soft signals (Day 17) here so a genuinely suspicious pattern still gets caught,
+        # even though it couldn't block creation. Every emergency booking is ALSO reviewable
+        # via the dedicated Emergency Audit Log (Day 25 Task 3) regardless of whether a signal
+        # fired — is_suspicious here keeps its normal meaning ("a heuristic actually flagged
+        # this"), it isn't forced true for every emergency just because it's an emergency.
+        review_reasons = evaluate_soft_fraud_signals(booking)
+        if review_reasons:
+            booking.is_suspicious = True
+            booking.fraud_flags = review_reasons
+            booking.save(update_fields=["is_suspicious", "fraud_flags"])
+
         return booking
