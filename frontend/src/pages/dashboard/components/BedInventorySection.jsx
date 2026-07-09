@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { hospitalsAPI } from "../../../api/client";
+import StalenessBadge from "../../../components/StalenessBadge.jsx";
 
 const BED_TYPES = ["general", "icu", "ventilator", "maternity", "emergency"];
 
@@ -98,6 +99,7 @@ export default function BedInventorySection({ beds, onChange }) {
                   available / total —{" "}
                   <a href="#" onClick={(e) => { e.preventDefault(); startEdit(bed); }}>edit total</a>
                 </p>
+                <div style={{ marginTop: 6 }}><StalenessBadge level={bed.staleness} compact /></div>
               </>
             )}
           </div>

@@ -59,6 +59,20 @@ export default function HospitalAdminDashboard() {
         </div>
       )}
 
+      {hospital && (() => {
+        const staleItems = [
+          ...(hospital.bed_inventory || []).filter((b) => b.staleness === "stale"),
+          ...(hospital.equipment || []).filter((e) => e.staleness === "stale"),
+        ];
+        if (staleItems.length === 0) return null;
+        return (
+          <div style={{ padding: 14, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#b91c1c", marginBottom: 20, fontSize: 13 }}>
+            🔴 {staleItems.length} item{staleItems.length === 1 ? "" : "s"} haven't been updated in over
+            6 hours. Patients may be seeing outdated availability — please review your counts below.
+          </div>
+        );
+      })()}
+
       {hospital && (
         <>
           <BedInventorySection beds={hospital.bed_inventory} onChange={loadHospital} />

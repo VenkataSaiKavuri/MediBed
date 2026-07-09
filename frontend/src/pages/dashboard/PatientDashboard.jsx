@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { hospitalsAPI } from "../../api/client";
 import { useAuth } from "../../context/AuthContext.jsx";
+import StalenessBadge from "../../components/StalenessBadge.jsx";
 
 const BED_TYPES = ["", "general", "icu", "ventilator", "maternity", "emergency"];
 const SORT_OPTIONS = [
@@ -139,7 +140,10 @@ export default function PatientDashboard() {
         {hospitals.map((h) => (
           <Link key={h.id} to={`/hospitals/${h.id}`} style={{ textDecoration: "none", color: "inherit" }}>
             <div style={{ padding: 16, background: "white", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-              <strong>{h.name}</strong>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                <strong>{h.name}</strong>
+                <StalenessBadge level={h.inventory_staleness} />
+              </div>
               <p style={{ margin: "4px 0 8px", color: "#666", fontSize: 14 }}>{h.address}, {h.city}</p>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {Object.entries(h.available_beds || {}).map(([type, cnt]) => (

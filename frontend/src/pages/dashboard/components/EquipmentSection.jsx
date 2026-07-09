@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { hospitalsAPI } from "../../../api/client";
+import StalenessBadge from "../../../components/StalenessBadge.jsx";
 
 const STATUSES = ["available", "in_use", "maintenance"];
 
@@ -64,6 +65,7 @@ export default function EquipmentSection({ equipment, onChange }) {
             <button onClick={() => cycleStatus(eq)} style={{ ...smallBtnStyle, marginTop: 6, textTransform: "capitalize" }}>
               {eq.status.replace("_", " ")}
             </button>
+            <div style={{ marginTop: 6 }}><StalenessBadge level={eq.staleness} compact /></div>
           </div>
         ))}
       </div>

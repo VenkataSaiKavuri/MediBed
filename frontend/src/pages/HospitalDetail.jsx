@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { hospitalsAPI } from "../api/client";
+import StalenessBadge from "../components/StalenessBadge.jsx";
 
 export default function HospitalDetail() {
   const { id } = useParams();
@@ -38,6 +39,7 @@ export default function HospitalDetail() {
             <div key={bed.id} style={cardStyle}>
               <strong style={{ textTransform: "capitalize" }}>{bed.bed_type}</strong>
               <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 700 }}>{bed.available_count}/{bed.total_count}</p>
+              <div style={{ marginTop: 4 }}><StalenessBadge level={bed.staleness} compact /></div>
             </div>
           ))}
         </div>
