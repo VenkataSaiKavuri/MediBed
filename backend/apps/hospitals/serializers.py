@@ -1,19 +1,30 @@
 from rest_framework import serializers
 
 from .models import BedInventory, Doctor, Equipment, Hospital
+from .staleness import staleness_level
 
 
 class BedInventorySerializer(serializers.ModelSerializer):
+    staleness = serializers.SerializerMethodField()
+
     class Meta:
         model = BedInventory
-        fields = ["id", "bed_type", "total_count", "available_count", "updated_at"]
+        fields = ["id", "bed_type", "total_count", "available_count", "updated_at", "staleness"]
         read_only_fields = ["available_count", "updated_at"]  # available_count only changes via booking lifecycle
+
+    def get_staleness(self, obj):
+        return staleness_level(obj.updated_at)
 
 
 class EquipmentSerializer(serializers.ModelSerializer):
+    staleness = serializers.SerializerMethodField()
+
     class Meta:
         model = Equipment
-        fields = ["id", "name", "total_count", "available_count", "status", "updated_at"]
+        fields = ["id", "name", "total_count", "available_count", "status", "updated_at", "staleness"]
+
+    def get_staleness(self, obj):
+        return staleness_level(obj.updated_at)
 
 
 class DoctorSerializer(serializers.ModelSerializer):
@@ -45,12 +56,13 @@ class HospitalListSerializer(serializers.ModelSerializer):
     bed/specialty info to let a patient judge relevance without an extra API call per hospital."""
     available_beds = serializers.SerializerMethodField()
     specialties = serializers.SerializerMethodField()
+    inventory_staleness = serializers.SerializerMethodField()
 
     class Meta:
         model = Hospital
         fields = [
             "id", "name", "city", "address", "latitude", "longitude", "phone_number",
-            "is_verified", "available_beds", "specialties",
+            "is_verified", "available_beds", "specialties", "inventory_staleness",
         ]
 
     def get_available_beds(self, obj):
@@ -61,6 +73,19 @@ class HospitalListSerializer(serializers.ModelSerializer):
 
     def get_specialties(self, obj):
         return sorted({doc.specialty for doc in obj.doctors.all() if doc.is_on_duty})
+
+    def get_inventory_staleness(self, obj):
+        """The most-stale bed row's staleness level — an honest 'worst case' trust signal
+        for the patient, rather than showing the freshest number and hiding a stale one."""
+        beds = list(obj.bed_inventory.all())
+        if not beds:
+            return None
+        levels = [staleness_level(bed.updated_at) for bed in beds]
+        if "stale" in levels:
+            return "stale"
+        if "aging" in levels:
+            return "aging"
+        return "fresh"
 
 
 class HospitalDetailSerializer(serializers.ModelSerializer):
