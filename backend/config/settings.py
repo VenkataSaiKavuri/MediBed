@@ -148,3 +148,20 @@ ID_DOCUMENT_ENCRYPTION_KEY = os.environ.get("ID_DOCUMENT_ENCRYPTION_KEY", "")
 # --- Celery (background jobs: SLA timers, no-show detection, notifications) ---
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+# --- Security hardening (Day 29) ---
+# All of these are conditional on DEBUG=False so local development over plain HTTP still
+# works — enabling SECURE_SSL_REDIRECT etc. in dev would break `python manage.py runserver`
+# on localhost, which doesn't serve HTTPS. In production (DEBUG=False), these all activate
+# automatically with zero extra configuration needed beyond setting DJANGO_DEBUG=False.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True          # force HTTP -> HTTPS
+    SESSION_COOKIE_SECURE = True        # cookies only sent over HTTPS
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000      # 1 year — tells browsers to always use HTTPS for this domain
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True  # stops browsers from guessing content-type in ways that enable XSS
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = "DENY"            # prevents this site being embedded in an iframe (clickjacking)
+    SECURE_REFERRER_POLICY = "same-origin"
