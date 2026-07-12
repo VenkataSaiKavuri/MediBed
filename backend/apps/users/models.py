@@ -1,5 +1,4 @@
 from django.contrib.auth.models import AbstractUser
-from django.conf import settings
 from django.db import models
 
 
@@ -49,7 +48,8 @@ class OneTimePassword(models.Model):
     we never reuse or update a code in place, so there's always an audit trail.
     """
     phone_number = models.CharField(max_length=15, db_index=True)
-    code = models.CharField(max_length=6)
+    code = models.CharField(max_length=64)  # stores a SHA-256 hash, never the plaintext code
+                                              # (Day 29 security pass — see apps/users/otp_utils.py)
     purpose = models.CharField(max_length=30, choices=OTPPurpose.choices, default=OTPPurpose.SIGNUP)
     is_used = models.BooleanField(default=False)
     attempts = models.PositiveSmallIntegerField(default=0)  # brute-force guard, max 5 tries per code

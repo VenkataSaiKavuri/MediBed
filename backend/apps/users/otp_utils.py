@@ -1,3 +1,4 @@
+import hashlib
 import random
 from datetime import timedelta
 
@@ -11,12 +12,24 @@ OTP_VALIDITY_MINUTES = 5
 MAX_VERIFY_ATTEMPTS = 5
 
 
+def _hash_code(code: str) -> str:
+    """
+    Day 29 security pass: OTP codes are hashed before storage, the same principle as
+    password hashing — a database leak (backup exposure, SQL injection, insider access)
+    should never hand out valid, unexpired OTP codes in plaintext. Uses SHA-256 salted
+    with SECRET_KEY; a full password-hasher (PBKDF2/bcrypt) would be overkill here since
+    OTP codes are short-lived (5 min) and rate-limited (5 attempts), unlike a password
+    an attacker could brute-force offline at leisure.
+    """
+    return hashlib.sha256(f"{code}{settings.SECRET_KEY}".encode()).hexdigest()
+
+
 def generate_and_send_otp(phone_number: str, purpose: str = OTPPurpose.SIGNUP) -> OneTimePassword:
     """Creates a new OTP row and 'sends' it. Swap send_sms() for a real provider before production."""
     code = "".join(random.choices("0123456789", k=OTP_LENGTH))
     otp = OneTimePassword.objects.create(
         phone_number=phone_number,
-        code=code,
+        code=_hash_code(code),  # only the hash is ever stored
         purpose=purpose,
         expires_at=timezone.now() + timedelta(minutes=OTP_VALIDITY_MINUTES),
     )
@@ -40,7 +53,7 @@ def verify_otp(phone_number: str, code: str, purpose: str = OTPPurpose.SIGNUP) -
     if otp.attempts >= MAX_VERIFY_ATTEMPTS:
         return False, "Too many incorrect attempts. Request a new OTP."
 
-    if otp.code != code:
+    if otp.code != _hash_code(code):
         otp.attempts += 1
         otp.save(update_fields=["attempts"])
         return False, "Incorrect OTP."

@@ -17,7 +17,9 @@ class IdentityDocumentAdmin(admin.ModelAdmin):
 
 @admin.register(OneTimePassword)
 class OneTimePasswordAdmin(admin.ModelAdmin):
-    list_display = ("phone_number", "code", "purpose", "is_used", "attempts", "created_at", "expires_at")
+    # 'code' deliberately excluded from list_display — it's a hash since Day 29's security
+    # pass, not a human-readable code, so showing it here would be noise, not useful info.
+    list_display = ("phone_number", "purpose", "is_used", "attempts", "created_at", "expires_at")
     list_filter = ("purpose", "is_used")
     readonly_fields = [f.name for f in OneTimePassword._meta.fields]
 
