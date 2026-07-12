@@ -6,6 +6,11 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import IsHospitalStaff, IsPatient
 
+import csv
+
+from django.http import HttpResponse
+
+from .analytics import get_full_analytics
 from .models import Booking, BookingStatus
 from .serializers import (
     BookingSerializer,
@@ -177,3 +182,49 @@ class VerifyPaymentView(APIView):
         booking.save(update_fields=["razorpay_payment_id", "deposit_paid"])
 
         return Response(BookingSerializer(booking).data)
+
+
+class HospitalAnalyticsView(APIView):
+    """
+    Day 28: occupancy + booking volume + no-show rate + status breakdown for the logged-in
+    hospital_admin's own hospital. Occupancy is CURRENT utilization (no historical bed-count
+    snapshots exist to build a true time series from); booking volume over the requested
+    window is the honest substitute for a "trend."
+    """
+    permission_classes = [permissions.IsAuthenticated, IsHospitalStaff]
+
+    def get(self, request):
+        days = int(request.query_params.get("days", 30))
+        data = get_full_analytics(request.user.hospital_id, days=days)
+        return Response(data)
+
+
+class HospitalAnalyticsExportView(APIView):
+    """CSV export of every booking for the logged-in hospital_admin's own hospital — the
+    actual underlying data behind the analytics view above, for admins who want to open it
+    in Excel/Sheets themselves rather than trust our aggregation. PDF export isn't built
+    today (see Day 28 notes) — CSV opens in Excel/Sheets/Numbers universally and needed no
+    new dependency, which was the higher-value trade-off for the time available."""
+    permission_classes = [permissions.IsAuthenticated, IsHospitalStaff]
+
+    def get(self, request):
+        bookings = Booking.objects.filter(hospital_id=request.user.hospital_id).order_by("-created_at")
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="medbeds_bookings_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Booking ID", "Patient", "Phone", "Bed Type", "Status", "Is Emergency",
+            "Condition", "Created At", "Confirmed At", "Deposit Amount", "Deposit Paid",
+            "Deposit Refunded", "Deposit Forfeited", "Escalation Count",
+        ])
+        for b in bookings:
+            writer.writerow([
+                b.id, b.patient.get_full_name() or b.patient.username, b.patient.phone_number,
+                b.bed_type, b.status, b.is_emergency, b.condition_category,
+                b.created_at.isoformat(), b.confirmed_at.isoformat() if b.confirmed_at else "",
+                b.deposit_amount, b.deposit_paid, b.deposit_refunded, b.deposit_forfeited,
+                b.escalation_count,
+            ])
+        return response
