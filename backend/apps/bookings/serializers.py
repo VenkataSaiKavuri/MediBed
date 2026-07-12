@@ -40,14 +40,14 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "patient", "patient_name", "patient_phone", "hospital", "hospital_name",
             "doctor", "doctor_name", "bed_type", "status", "is_emergency", "condition_category",
-            "scheduled_time", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
-            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
-            "created_at", "updated_at", "status_logs",
+            "scheduled_time", "sla_deadline", "confirmed_at", "escalation_count", "deposit_amount",
+            "deposit_paid", "deposit_refunded", "deposit_forfeited", "razorpay_order_id",
+            "razorpay_payment_id", "created_at", "updated_at", "status_logs",
         ]
         read_only_fields = [
-            "id", "status", "sla_deadline", "confirmed_at", "deposit_amount", "deposit_paid",
-            "deposit_refunded", "deposit_forfeited", "razorpay_order_id", "razorpay_payment_id",
-            "created_at", "updated_at", "status_logs",
+            "id", "status", "sla_deadline", "confirmed_at", "escalation_count", "deposit_amount",
+            "deposit_paid", "deposit_refunded", "deposit_forfeited", "razorpay_order_id",
+            "razorpay_payment_id", "created_at", "updated_at", "status_logs",
         ]
 
 
@@ -201,6 +201,16 @@ class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid bed type.")
         return value
 
+    def validate_patient_latitude(self, value):
+        if value is not None and not (-90 <= value <= 90):
+            raise serializers.ValidationError("Latitude must be between -90 and 90.")
+        return value
+
+    def validate_patient_longitude(self, value):
+        if value is not None and not (-180 <= value <= 180):
+            raise serializers.ValidationError("Longitude must be between -180 and 180.")
+        return value
+
     def create(self, validated_data):
         from apps.core.notifications import notify_booking_status_change, notify_hospital_of_emergency
 
@@ -224,5 +234,19 @@ class CreateEmergencyBookingSerializer(serializers.ModelSerializer):
             notify_hospital_of_emergency(booking)
         except Exception as e:  # noqa: BLE001 — same principle: never let this block booking creation
             print(f"[notification error] Failed to alert hospital for emergency booking {booking.id}: {e}")
+
+        # Day 25: emergency bookings deliberately skip Day 16-18's real-time fraud gates
+        # (flagged-user block, duplicate check, ID requirement) for speed — but that makes
+        # POST-HOC review even more important than for regular bookings, not less. Run the
+        # same soft signals (Day 17) here so a genuinely suspicious pattern still gets caught,
+        # even though it couldn't block creation. Every emergency booking is ALSO reviewable
+        # via the dedicated Emergency Audit Log (Day 25 Task 3) regardless of whether a signal
+        # fired — is_suspicious here keeps its normal meaning ("a heuristic actually flagged
+        # this"), it isn't forced true for every emergency just because it's an emergency.
+        review_reasons = evaluate_soft_fraud_signals(booking)
+        if review_reasons:
+            booking.is_suspicious = True
+            booking.fraud_flags = review_reasons
+            booking.save(update_fields=["is_suspicious", "fraud_flags"])
 
         return booking
