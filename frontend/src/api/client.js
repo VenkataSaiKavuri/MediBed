@@ -92,6 +92,8 @@ export const bookingsAPI = {
   }),
   transition: (id, status, note = "") => client.patch(`/bookings/${id}/transition/`, { status, note }),
   verifyPayment: (id, payload) => client.post(`/bookings/${id}/verify-payment/`, payload),
+  analytics: (days = 30) => client.get("/bookings/hospital/analytics/", { params: { days } }),
+  analyticsExportUrl: "/bookings/hospital/analytics/export/",
 };
 
 export const fraudAPI = {
@@ -102,6 +104,7 @@ export const fraudAPI = {
   clearBookingFlag: (id) => client.post(`/admin-panel/suspicious-bookings/${id}/clear/`),
   pendingDocuments: () => client.get("/admin-panel/pending-documents/"),
   reviewDocument: (id, action) => client.post(`/admin-panel/pending-documents/${id}/review/`, { action }),
+  emergencyAudit: () => client.get("/admin-panel/emergency-audit/"),
 };
 
 export default client;

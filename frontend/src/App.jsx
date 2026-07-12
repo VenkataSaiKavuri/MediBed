@@ -12,6 +12,7 @@ import BookingConfirmation from "./pages/bookings/BookingConfirmation.jsx";
 import UploadIdentityDocument from "./pages/identity/UploadIdentityDocument.jsx";
 import HospitalAdminDashboard from "./pages/dashboard/HospitalAdminDashboard.jsx";
 import BookingsDashboard from "./pages/dashboard/BookingsDashboard.jsx";
+import HospitalAnalytics from "./pages/dashboard/HospitalAnalytics.jsx";
 import PlatformAdminDashboard from "./pages/dashboard/PlatformAdminDashboard.jsx";
 import PatientDashboard from "./pages/dashboard/PatientDashboard.jsx";
 
@@ -87,6 +88,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["hospital_admin"]}>
                 <BookingsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/hospital-admin/analytics"
+            element={
+              <ProtectedRoute allowedRoles={["hospital_admin"]}>
+                <HospitalAnalytics />
               </ProtectedRoute>
             }
           />

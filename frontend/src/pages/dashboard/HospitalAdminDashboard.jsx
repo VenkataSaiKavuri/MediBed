@@ -40,15 +40,26 @@ export default function HospitalAdminDashboard() {
         </button>
       </div>
 
-      <Link
-        to="/dashboard/hospital-admin/bookings"
-        style={{
-          display: "inline-block", marginBottom: 20, padding: "10px 16px", background: "#2563eb",
-          color: "white", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none",
-        }}
-      >
-        📋 View Booking Requests
-      </Link>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <Link
+          to="/dashboard/hospital-admin/bookings"
+          style={{
+            display: "inline-block", padding: "10px 16px", background: "#2563eb",
+            color: "white", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none",
+          }}
+        >
+          📋 View Booking Requests
+        </Link>
+        <Link
+          to="/dashboard/hospital-admin/analytics"
+          style={{
+            display: "inline-block", padding: "10px 16px", background: "white", border: "1px solid #ddd",
+            color: "#333", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none",
+          }}
+        >
+          📊 Analytics
+        </Link>
+      </div>
 
       {error && (
         <div style={{ padding: 16, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#b91c1c" }}>
