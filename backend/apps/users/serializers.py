@@ -26,6 +26,17 @@ class SignupSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_phone_number(self, value):
+        # Day 29: basic E.164-ish format check — was previously unvalidated (any string up
+        # to 15 chars was accepted, including garbage that would silently break SMS delivery
+        # later). Doesn't verify the number is real/reachable, just that it's shaped correctly.
+        import re
+        if not re.match(r"^\+?[1-9]\d{7,14}$", value):
+            raise serializers.ValidationError(
+                "Enter a valid phone number with country code, e.g. +919876543210."
+            )
+        return value
+
     def create(self, validated_data):
         password = validated_data.pop("password")
         user = User(**validated_data)
